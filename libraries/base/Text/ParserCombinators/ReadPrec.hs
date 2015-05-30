@@ -83,6 +83,9 @@ instance Monad ReadPrec where
   fail s    = P (\_ -> fail s)
   P f >>= k = P (\n -> do a <- f n; let P f' = k a in f' n)
 
+instance MonadFail ReadPrec where
+  mfail s = P (\_ -> mfail s)
+
 instance MonadPlus ReadPrec where
   mzero = pfail
   mplus = (+++)

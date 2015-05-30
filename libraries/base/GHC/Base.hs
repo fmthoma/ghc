@@ -658,6 +658,9 @@ instance  Monad Maybe  where
     return              = Just
     fail _              = Nothing
 
+instance MonadFail Maybe where
+    mfail _ = Nothing
+
 -- -----------------------------------------------------------------------------
 -- The Alternative class definition
 
@@ -742,6 +745,10 @@ instance Monad []  where
     return x            = [x]
     {-# INLINE fail #-}
     fail _              = []
+
+instance MonadFail [] where
+    {-# INLINE mfail #-}
+    mfail _ = []
 
 instance Alternative [] where
     empty = []
