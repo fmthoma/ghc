@@ -20,6 +20,7 @@ module Control.Monad
 
       Functor(fmap)
     , Monad((>>=), (>>), return, fail)
+    , MonadFail(mfail)
     , MonadPlus(mzero, mplus)
     -- * Functions
 
