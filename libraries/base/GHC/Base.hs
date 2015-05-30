@@ -498,6 +498,16 @@ original default.
 
 -}
 
+-- | When a value is bound in do-notation, the pattern on the left hand side of
+-- @<-@ might not match. In this case, this class provides a function to
+-- recover.
+--
+-- A 'Monad' without a 'MonadFail' instance may only be used in conjunction
+-- with pattern that always match, such as newtypes, tuples, data types with
+-- only a single data constructor, and irrefutable patterns (@~pat@).
+class Monad m => MonadFail m where
+    mfail :: String -> m a
+
 -- | Same as '>>=', but with the arguments interchanged.
 {-# SPECIALISE (=<<) :: (a -> [b]) -> [a] -> [b] #-}
 (=<<)           :: Monad m => (a -> m b) -> m a -> m b

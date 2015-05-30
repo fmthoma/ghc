@@ -248,6 +248,8 @@ basicKnownKeyNames
         fmapName,
         joinMName,
 
+        mondFailClassName, mfailMName,
+
         -- MonadRec stuff
         mfixName,
 
@@ -854,6 +856,11 @@ thenMName          = varQual gHC_BASE (fsLit ">>")     thenMClassOpKey
 bindMName          = varQual gHC_BASE (fsLit ">>=")    bindMClassOpKey
 returnMName        = varQual gHC_BASE (fsLit "return") returnMClassOpKey
 failMName          = varQual gHC_BASE (fsLit "fail")   failMClassOpKey
+
+-- Class MonadFail
+mondFailClassName, mfailMName :: Name
+mondFailClassName  = varQual gHC_BASE (fsLit "MonadFail") monadFailClassKey
+mfailMName         = varQual gHC_BASE (fsLit "mfail")     mfailMClassOpKey
 
 -- Classes (Applicative, Foldable, Traversable)
 applicativeClassName, foldableClassName, traversableClassName :: Name
@@ -1818,6 +1825,11 @@ returnMClassOpKey             = mkPreludeMiscIdUnique 174
 -- Recursive do notation
 mfixIdKey :: Unique
 mfixIdKey       = mkPreludeMiscIdUnique 175
+
+-- MonadFail
+monadFailClassKey, mfailMClassOpKey :: Unique
+monadFailClassKey = mkPreludeMiscIdUnique 176
+mfailMClassOpKey  = mkPreludeMiscIdUnique 177
 
 -- Arrow notation
 arrAIdKey, composeAIdKey, firstAIdKey, appAIdKey, choiceAIdKey,
