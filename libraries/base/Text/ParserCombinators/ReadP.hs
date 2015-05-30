@@ -121,6 +121,9 @@ instance Monad P where
 
   fail _ = Fail
 
+instance MonadFail P where
+  mfail _ = Fail
+
 instance Alternative P where
   empty = Fail
 
@@ -168,6 +171,9 @@ instance Monad ReadP where
   return x  = R (\k -> k x)
   fail _    = R (\_ -> Fail)
   R m >>= f = R (\k -> m (\a -> let R m' = f a in m' k))
+
+instance MonadFail ReadP where
+  mfail _ = R (\_ -> Fail)
 
 instance Alternative ReadP where
     empty = mzero
