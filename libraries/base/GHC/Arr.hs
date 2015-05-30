@@ -686,8 +686,9 @@ arr@(Array l u n _) // ies =
 {-# INLINE unsafeReplace #-}
 unsafeReplace :: Ix i => Array i e -> [(Int, e)] -> Array i e
 unsafeReplace arr ies = runST (do
-    STArray l u n marr# <- thawSTArray arr
-    ST (foldr (fill marr#) (done l u n marr#) ies))
+    thawed <- thawSTArray arr
+    case thawed of
+        STArray l u n marr# -> ST (foldr (fill marr#) (done l u n marr#) ies))
 
 -- | @'accum' f@ takes an array and an association list and accumulates
 -- pairs from the list into the array with the accumulating function @f@.
@@ -703,8 +704,9 @@ accum f arr@(Array l u n _) ies =
 {-# INLINE unsafeAccum #-}
 unsafeAccum :: Ix i => (e -> a -> e) -> Array i e -> [(Int, a)] -> Array i e
 unsafeAccum f arr ies = runST (do
-    STArray l u n marr# <- thawSTArray arr
-    ST (foldr (adjust f marr#) (done l u n marr#) ies))
+    thawed <- thawSTArray arr
+    case thawed of
+        STArray l u n marr# -> ST (foldr (adjust f marr#) (done l u n marr#) ies))
 
 {-# INLINE [1] amap #-}
 amap :: Ix i => (a -> b) -> Array i a -> Array i b
