@@ -36,6 +36,7 @@ import Outputable
 import Util
 import SrcLoc
 import FastString
+import DynFlags
 
 -- Create chunkified tuple tybes for monad comprehensions
 import MkCore
@@ -502,16 +503,16 @@ tcMcStmt ctxt (BindStmt pat rhs bind_op fail_op) res_ty thing_inside
            -- (>>=) :: rhs_ty -> (pat_ty -> new_res_ty) -> res_ty
         ; bind_op'   <- tcSyntaxOp MCompOrigin bind_op
                              (mkFunTys [rhs_ty, mkFunTy pat_ty new_res_ty] res_ty)
-
         ; (pat', thing) <- tcPat (StmtCtxt ctxt) pat pat_ty $
                            thing_inside new_res_ty
+        ; rhs' <- tcMonoExprNC rhs rhs_ty
 
            -- If (but only if) the pattern can fail, typecheck the 'fail' operator
         ; fail_op' <- if isIrrefutableHsPat pat'
                       then return noSyntaxExpr
                       else tcSyntaxOp MCompOrigin fail_op (mkFunTy stringTy new_res_ty)
+                      -- MARKER/quchen: Add MonadFail checking here as well
 
-        ; rhs' <- tcMonoExprNC rhs rhs_ty
 
         ; return (BindStmt pat' rhs' bind_op' fail_op', thing) }
 
@@ -750,17 +751,21 @@ tcDoStmt ctxt (BindStmt pat rhs bind_op fail_op) res_ty thing_inside
         ; new_res_ty <- newFlexiTyVarTy liftedTypeKind
         ; bind_op'   <- tcSyntaxOp DoOrigin bind_op
                              (mkFunTys [rhs_ty, mkFunTy pat_ty new_res_ty] res_ty)
-
         ; (pat', thing) <- tcPat (StmtCtxt ctxt) pat pat_ty $
                            thing_inside new_res_ty
+        ; rhs' <- tcMonoExprNC rhs rhs_ty
 
                 -- If (but only if) the pattern can fail,
                 -- typecheck the 'fail' operator
         ; fail_op' <- if isIrrefutableHsPat pat'
-                      then return noSyntaxExpr
-                      else tcSyntaxOp DoOrigin fail_op (mkFunTy stringTy new_res_ty)
-
-        ; rhs' <- tcMonoExprNC rhs rhs_ty
+            then return noSyntaxExpr
+            else do
+                warnFlag <- woptM Opt_WarnMissingMonadFailInstance
+                when warnFlag (tcCheckMissingMonadFailInstance pat new_res_ty)
+                            -- MARKER/quchen
+                            -- ctxt :: HsStmtContext Name
+                            -- bindStmt :: Stmt Name (Located (HsExpr Name))
+                tcSyntaxOp DoOrigin fail_op (mkFunTy stringTy new_res_ty)
 
         ; return (BindStmt pat' rhs' bind_op' fail_op', thing) }
 
@@ -820,6 +825,21 @@ tcDoStmt ctxt (RecStmt { recS_stmts = stmts, recS_later_ids = later_names
 
 tcDoStmt _ stmt _ _
   = pprPanic "tcDoStmt: unexpected Stmt" (ppr stmt)
+
+
+
+tcCheckMissingMonadFailInstance :: Outputable a => LPat a -> TcType -> TcRn ()
+tcCheckMissingMonadFailInstance pattern doExprType =
+    addWarnAt (getLoc pattern) . hsep $
+           [ quotes (ppr pattern)
+           , ptext (sLit "is used in the context")
+           , quotes (ppr doExprType)
+           -- MARKER/quchen
+           -- , ptext (sLit "does not have a MonadFail instance, but")
+           -- , ptext (sLit "is used to bind to a failable pattern.")
+           -- , ptext (sLit "This will become an error in GHC 7.14,")
+           -- , ptext (sLit "under the MonadFail proposal.")
+           ]
 
 {-
 Note [Treat rebindable syntax first]
