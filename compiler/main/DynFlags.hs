@@ -499,6 +499,7 @@ data WarningFlag =
    | Opt_WarnWarningsDeprecations
    | Opt_WarnDeprecatedFlags
    | Opt_WarnAMP
+   | Opt_WarnMissingMonadFailInstance
    | Opt_WarnDodgyExports
    | Opt_WarnDodgyImports
    | Opt_WarnOrphans
@@ -2864,6 +2865,7 @@ fWarningFlags = [
   flagSpec "warn-missing-import-lists"        Opt_WarnMissingImportList,
   flagSpec "warn-missing-local-sigs"          Opt_WarnMissingLocalSigs,
   flagSpec "warn-missing-methods"             Opt_WarnMissingMethods,
+  flagSpec "warn-missing-monadfail-instance"  Opt_WarnMissingMonadFailInstance,
   flagSpec "warn-missing-signatures"          Opt_WarnMissingSigs,
   flagSpec "warn-missing-exported-sigs"       Opt_WarnMissingExportedSigs,
   flagSpec "warn-monomorphism-restriction"    Opt_WarnMonomorphism,
@@ -3352,7 +3354,8 @@ standardWarnings -- see Note [Documenting warning flags]
         Opt_WarnAlternativeLayoutRuleTransitional,
         Opt_WarnUnsupportedLlvmVersion,
         Opt_WarnContextQuantification,
-        Opt_WarnTabs
+        Opt_WarnTabs,
+        Opt_WarnMissingMonadFailInstance
       ]
 
 minusWOpts :: [WarningFlag]
