@@ -393,7 +393,7 @@ genCallSimpleCast w t@(PrimTarget op) [dst] args = do
     (argsV, stmts2, top2)       <- arg_vars args_hints ([], nilOL, [])
     (argsV', stmts4)            <- castVars $ zip argsV [width]
     (retV, s1)                  <- doExpr width $ Call StdCall fptr argsV' []
-    ([retV'], stmts5)           <- castVars [(retV,dstTy)]
+    (~[retV'], stmts5)          <- castVars [(retV,dstTy)]
     let s2                       = Store retV' dstV
 
     let stmts = stmts2 `appOL` stmts4 `snocOL`
@@ -991,7 +991,7 @@ genMachOp _ op [x] = case op of
 
         negateVec ty v2 negOp = do
             (vx, stmts1, top) <- exprToVar x
-            ([vx'], stmts2) <- castVars [(vx, ty)]
+            (~[vx'], stmts2) <- castVars [(vx, ty)]
             (v1, s1) <- doExpr ty $ LlvmOp negOp v2 vx'
             return (v1, stmts1 `appOL` stmts2 `snocOL` s1, top)
 
@@ -1054,7 +1054,7 @@ genMachOp_slow :: EOption -> MachOp -> [CmmExpr] -> LlvmM ExprData
 genMachOp_slow _ (MO_V_Extract l w) [val, idx] = do
     (vval, stmts1, top1) <- exprToVar val
     (vidx, stmts2, top2) <- exprToVar idx
-    ([vval'], stmts3)    <- castVars [(vval, LMVector l ty)]
+    (~[vval'], stmts3)   <- castVars [(vval, LMVector l ty)]
     (v1, s1)             <- doExpr ty $ Extract vval' vidx
     return (v1, stmts1 `appOL` stmts2 `appOL` stmts3 `snocOL` s1, top1 ++ top2)
   where
@@ -1063,7 +1063,7 @@ genMachOp_slow _ (MO_V_Extract l w) [val, idx] = do
 genMachOp_slow _ (MO_VF_Extract l w) [val, idx] = do
     (vval, stmts1, top1) <- exprToVar val
     (vidx, stmts2, top2) <- exprToVar idx
-    ([vval'], stmts3)    <- castVars [(vval, LMVector l ty)]
+    (~[vval'], stmts3)   <- castVars [(vval, LMVector l ty)]
     (v1, s1)             <- doExpr ty $ Extract vval' vidx
     return (v1, stmts1 `appOL` stmts2 `appOL` stmts3 `snocOL` s1, top1 ++ top2)
   where
@@ -1074,7 +1074,7 @@ genMachOp_slow _ (MO_V_Insert l w) [val, elt, idx] = do
     (vval, stmts1, top1) <- exprToVar val
     (velt, stmts2, top2) <- exprToVar elt
     (vidx, stmts3, top3) <- exprToVar idx
-    ([vval'], stmts4)    <- castVars [(vval, ty)]
+    (~[vval'], stmts4)   <- castVars [(vval, ty)]
     (v1, s1)             <- doExpr ty $ Insert vval' velt vidx
     return (v1, stmts1 `appOL` stmts2 `appOL` stmts3 `appOL` stmts4 `snocOL` s1,
             top1 ++ top2 ++ top3)
@@ -1085,7 +1085,7 @@ genMachOp_slow _ (MO_VF_Insert l w) [val, elt, idx] = do
     (vval, stmts1, top1) <- exprToVar val
     (velt, stmts2, top2) <- exprToVar elt
     (vidx, stmts3, top3) <- exprToVar idx
-    ([vval'], stmts4)    <- castVars [(vval, ty)]
+    (~[vval'], stmts4)   <- castVars [(vval, ty)]
     (v1, s1)             <- doExpr ty $ Insert vval' velt vidx
     return (v1, stmts1 `appOL` stmts2 `appOL` stmts3 `appOL` stmts4 `snocOL` s1,
             top1 ++ top2 ++ top3)
@@ -1202,7 +1202,7 @@ genMachOp_slow opt op [x, y] = case op of
         binCastLlvmOp ty binOp = do
             (vx, stmts1, top1) <- exprToVar x
             (vy, stmts2, top2) <- exprToVar y
-            ([vx', vy'], stmts3) <- castVars [(vx, ty), (vy, ty)]
+            (~[vx', vy'], stmts3) <- castVars [(vx, ty), (vy, ty)]
             (v1, s1) <- doExpr ty $ binOp vx' vy'
             return (v1, stmts1 `appOL` stmts2 `appOL` stmts3 `snocOL` s1,
                     top1 ++ top2)
