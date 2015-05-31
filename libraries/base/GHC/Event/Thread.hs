@@ -101,7 +101,7 @@ closeFdWith close fd = do
   eventManagerArray <- readIORef eventManager
   let (low, high) = boundsIOArray eventManagerArray
   mgrs <- flip mapM [low..high] $ \i -> do
-    Just (_,!mgr) <- readIOArray eventManagerArray i
+    ~(Just (_,!mgr)) <- readIOArray eventManagerArray i
     return mgr
   mask_ $ do
     tables <- flip mapM mgrs $ \mgr -> takeMVar $ M.callbackTableVar mgr fd
@@ -180,7 +180,7 @@ getSystemEventManager = do
 
 getSystemEventManager_ :: IO EventManager
 getSystemEventManager_ = do
-  Just mgr <- getSystemEventManager
+  ~(Just mgr) <- getSystemEventManager
   return mgr
 {-# INLINE getSystemEventManager_ #-}
 
@@ -213,7 +213,7 @@ ioManagerLock = unsafePerformIO $ do
 
 getSystemTimerManager :: IO TM.TimerManager
 getSystemTimerManager = do
-  Just mgr <- readIORef timerManager
+  ~(Just mgr) <- readIORef timerManager
   return mgr
 
 foreign import ccall unsafe "getOrSetSystemTimerThreadEventManagerStore"
@@ -336,7 +336,7 @@ ioManagerCapabilitiesChanged = do
 
               -- copy the existing values into the new array:
               forM_ [0..high] $ \i -> do
-                Just (tid,mgr) <- readIOArray eventManagerArray i
+                ~(Just (tid,mgr)) <- readIOArray eventManagerArray i
                 if i < numEnabled
                   then writeIOArray new_eventManagerArray i (Just (tid,mgr))
                   else do tid' <- restartPollLoop mgr i
@@ -350,7 +350,7 @@ ioManagerCapabilitiesChanged = do
               writeIORef eventManager new_eventManagerArray
       else when (new_n_caps > numEnabled) $
             forM_ [numEnabled..new_n_caps-1] $ \i -> do
-              Just (_,mgr) <- readIOArray eventManagerArray i
+              ~(Just (_,mgr)) <- readIOArray eventManagerArray i
               tid <- restartPollLoop mgr i
               writeIOArray eventManagerArray i (Just (tid,mgr))
 

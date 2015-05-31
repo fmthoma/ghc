@@ -605,10 +605,10 @@ hDuplicate h@(FileHandle path m) = do
   withHandle_' "hDuplicate" h m $ \h_ ->
       dupHandle path h Nothing h_ (Just handleFinalizer)
 hDuplicate h@(DuplexHandle path r w) = do
-  write_side@(FileHandle _ write_m) <-
+  ~write_side@(FileHandle _ write_m) <-
      withHandle_' "hDuplicate" h w $ \h_ ->
         dupHandle path h Nothing h_ (Just handleFinalizer)
-  read_side@(FileHandle _ read_m) <-
+  ~read_side@(FileHandle _ read_m) <-
     withHandle_' "hDuplicate" h r $ \h_ ->
         dupHandle path h (Just write_m) h_  Nothing
   return (DuplexHandle path read_m write_m)
@@ -695,7 +695,7 @@ dupHandleTo filepath h other_side
     Nothing   -> ioe_dupHandlesNotCompatible h
     Just dev' -> do
       _ <- IODevice.dup2 dev dev'
-      FileHandle _ m <- dupHandle_ dev' filepath other_side h_ mb_finalizer
+      ~(FileHandle _ m) <- dupHandle_ dev' filepath other_side h_ mb_finalizer
       takeMVar m
 
 -- ---------------------------------------------------------------------------

@@ -1661,7 +1661,7 @@ doCopyMutableByteArrayOp = emitCopyByteArray copy
     -- TODO: Optimize branch for common case of no aliasing.
     copy src dst dst_p src_p bytes = do
         dflags <- getDynFlags
-        [moveCall, cpyCall] <- forkAlts [
+        ~[moveCall, cpyCall] <- forkAlts [
             getCode $ emitMemmoveCall dst_p src_p bytes (mkIntExpr dflags 1),
             getCode $ emitMemcpyCall  dst_p src_p bytes (mkIntExpr dflags 1)
             ]
@@ -1805,7 +1805,7 @@ doCopyMutableArrayOp = emitCopyArray copy
     -- TODO: Optimize branch for common case of no aliasing.
     copy src dst dst_p src_p bytes = do
         dflags <- getDynFlags
-        [moveCall, cpyCall] <- forkAlts [
+        ~[moveCall, cpyCall] <- forkAlts [
             getCode $ emitMemmoveCall dst_p src_p (mkIntExpr dflags bytes)
             (mkIntExpr dflags (wORD_SIZE dflags)),
             getCode $ emitMemcpyCall  dst_p src_p (mkIntExpr dflags bytes)
@@ -1868,7 +1868,7 @@ doCopySmallMutableArrayOp = emitCopySmallArray copy
     -- TODO: Optimize branch for common case of no aliasing.
     copy src dst dst_p src_p bytes = do
         dflags <- getDynFlags
-        [moveCall, cpyCall] <- forkAlts
+        ~[moveCall, cpyCall] <- forkAlts
             [ getCode $ emitMemmoveCall dst_p src_p (mkIntExpr dflags bytes)
               (mkIntExpr dflags (wORD_SIZE dflags))
             , getCode $ emitMemcpyCall  dst_p src_p (mkIntExpr dflags bytes)

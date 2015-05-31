@@ -669,13 +669,13 @@ mkDuplexHandle :: (IODevice dev, BufferedIO dev, Typeable dev) => dev
                -> FilePath -> Maybe TextEncoding -> NewlineMode -> IO Handle
 mkDuplexHandle dev filepath mb_codec tr_newlines = do
 
-  write_side@(FileHandle _ write_m) <-
+  ~write_side@(FileHandle _ write_m) <-
        mkHandle dev filepath WriteHandle True mb_codec
                         tr_newlines
                         (Just handleFinalizer)
                         Nothing -- no othersie
 
-  read_side@(FileHandle _ read_m) <-
+  ~read_side@(FileHandle _ read_m) <-
       mkHandle dev filepath ReadHandle True mb_codec
                         tr_newlines
                         Nothing -- no finalizer
