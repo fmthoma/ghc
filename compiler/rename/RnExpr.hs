@@ -700,6 +700,7 @@ rnStmt ctxt rnBody (L loc (BindStmt pat body _ _)) thing_inside
                 -- The binders do not scope over the expression
         ; (bind_op, fvs1) <- lookupStmtName ctxt bindMName
         ; (fail_op, fvs2) <- lookupStmtName ctxt failMName
+                                   -- See note [Implement MonadFail desugaring]
         ; rnPat (StmtCtxt ctxt) pat $ \ pat' -> do
         { (thing, fvs3) <- thing_inside (collectPatBinders pat')
         ; return (([L loc (BindStmt pat' body' bind_op fail_op)], thing),
@@ -991,6 +992,7 @@ rn_rec_stmt rnBody _ (L loc (BindStmt pat' body _ _), fv_pat)
   = do { (body', fv_expr) <- rnBody body
        ; (bind_op, fvs1) <- lookupSyntaxName bindMName
        ; (fail_op, fvs2) <- lookupSyntaxName failMName
+                                   -- See note [Implement MonadFail desugaring]
        ; let bndrs = mkNameSet (collectPatBinders pat')
              fvs   = fv_expr `plusFV` fv_pat `plusFV` fvs1 `plusFV` fvs2
        ; return [(bndrs, fvs, bndrs `intersectNameSet` fvs,
@@ -1127,6 +1129,13 @@ glom it together with the first two groups
      { rec { x <- ...y...; p <- z ; y <- ...x... ;
              q <- x ; z <- y } ;
        r <- x }
+
+Note [Implement MonadFail desugaring]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order to activate desugaring to `mfail` instead of `mfail`, requiring a
+`MonadFail` constraint when a failable match is done in do-notation, simply
+change the "failMName" to "mfailMName".
 -}
 
 glomSegments :: HsStmtContext Name
