@@ -1261,12 +1261,35 @@ test.hs:(5,4)-(6,7):
           </indexterm>
           <indexterm><primary>amp</primary></indexterm>
           <indexterm><primary>applicative-monad proposal</primary></indexterm>
-          <para>Causes a warning to be emitted when a definition
-          is in conflict with the AMP (Applicative-Monad proosal),
-          namely:
-          1. Instance of Monad without Applicative;
-          2. Instance of MonadPlus without Alternative;
-          3. Custom definitions of join/pure/&lt;*&gt;</para>
+          <para>Caused a warning to be emitted when a definition
+          is in conflict with the AMP (Applicative-Monad proosal). As of
+          GHC 7.10, the AMP is implemented in GHC, so that this option is
+          redundant.</para>
+
+          <para>This option is deprecated and does nothing. It will be removed
+          in GHC 7.12.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-fwarn-missing-monadfail-instance</option>:</term>
+        <listitem>
+          <indexterm><primary><option>-fwarn-missing-monadfail-instance</option></primary>
+          </indexterm>
+          <indexterm><primary>monadfail</primary></indexterm>
+          <indexterm><primary>monadfail proposal</primary></indexterm>
+          <para>Causes a warning to be emitted when a binding in do-notation
+          is matched against a pattern that can potentially fail. In this case,
+          the compiler will insert a call to mfail instead of the current fail
+          in the future, which will require an instance of MonadFail. The
+          long-term goal of this is removing the fail function from Monad.
+          </para>
+
+<programlisting>
+-- What happens if a Nothing is encountered? -> (m)fail.
+x = do Just x &lt;- someComputation
+       return x
+</programlisting>
 
           <para>This option is on by default.</para>
         </listitem>
