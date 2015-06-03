@@ -643,6 +643,8 @@ data ExtensionFlag
    | Opt_PartialTypeSignatures
    | Opt_NamedWildCards
    | Opt_StaticPointers
+
+   | Opt_MonadFailDesugaring -- MARKER/quchen: Add documentation (see notes mentioned above)
    deriving (Eq, Enum, Show)
 
 type SigOf = Map ModuleName Module
@@ -3126,6 +3128,7 @@ xFlags = [
   flagSpec "LiberalTypeSynonyms"              Opt_LiberalTypeSynonyms,
   flagSpec "MagicHash"                        Opt_MagicHash,
   flagSpec "MonadComprehensions"              Opt_MonadComprehensions,
+  flagSpec "MonadFailDesugaring"              Opt_MonadFailDesugaring, -- MARKER/quchen: Add documentation (see notes mentioned above)
   flagSpec "MonoLocalBinds"                   Opt_MonoLocalBinds,
   flagSpec' "MonoPatBinds"                    Opt_MonoPatBinds
     (\ turn_on -> when turn_on $

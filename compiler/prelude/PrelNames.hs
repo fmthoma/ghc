@@ -560,12 +560,13 @@ map_RDR, append_RDR :: RdrName
 map_RDR                 = varQual_RDR gHC_BASE (fsLit "map")
 append_RDR              = varQual_RDR gHC_BASE (fsLit "++")
 
-foldr_RDR, build_RDR, returnM_RDR, bindM_RDR, failM_RDR :: RdrName
+foldr_RDR, build_RDR, returnM_RDR, bindM_RDR, failM_RDR, mfailM_RDR :: RdrName
 foldr_RDR               = nameRdrName foldrName
 build_RDR               = nameRdrName buildName
 returnM_RDR             = nameRdrName returnMName
 bindM_RDR               = nameRdrName bindMName
 failM_RDR               = nameRdrName failMName
+mfailM_RDR              = nameRdrName mfailMName
 
 left_RDR, right_RDR :: RdrName
 left_RDR                = nameRdrName leftDataConName
