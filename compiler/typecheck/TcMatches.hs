@@ -762,9 +762,7 @@ tcDoStmt ctxt (BindStmt pat rhs bind_op fail_op) res_ty thing_inside
             else do
                 warnFlag <- woptM Opt_WarnMissingMonadFailInstance
                 when warnFlag (tcCheckMissingMonadFailInstance pat new_res_ty)
-                            -- MARKER/quchen
-                            -- ctxt :: HsStmtContext Name
-                            -- bindStmt :: Stmt Name (Located (HsExpr Name))
+                          -- MARKER/quchen TODO/fmthoma: res_ty or new_res_ty?
                 tcSyntaxOp DoOrigin fail_op (mkFunTy stringTy new_res_ty)
 
         ; return (BindStmt pat' rhs' bind_op' fail_op', thing) }
@@ -827,18 +825,20 @@ tcDoStmt _ stmt _ _
   = pprPanic "tcDoStmt: unexpected Stmt" (ppr stmt)
 
 
-
-tcCheckMissingMonadFailInstance :: Outputable a => LPat a -> TcType -> TcRn ()
-tcCheckMissingMonadFailInstance pattern doExprType =
-    addWarnAt (getLoc pattern) . hsep $
-           [ quotes (ppr pattern)
+-- MonadFail Proposal
+tcCheckMissingMonadFailInstance :: OutputableBndr a => LPat a -> TcType -> TcRn ()
+tcCheckMissingMonadFailInstance pattern doExprType = do
+    tidyEnv <- tcInitTidyEnv
+    (_, zonkedType) <- zonkTidyTcType tidyEnv doExprType
+    addWarnAt (getLoc pattern) . vcat $
+           [ ptext (sLit "The failable pattern")
+           , quotes (hsep [ppr pattern, ptext (sLit " <- ... ")])
            , ptext (sLit "is used in the context")
-           , quotes (ppr doExprType)
-           -- MARKER/quchen
-           -- , ptext (sLit "does not have a MonadFail instance, but")
-           -- , ptext (sLit "is used to bind to a failable pattern.")
-           -- , ptext (sLit "This will become an error in GHC 7.14,")
-           -- , ptext (sLit "under the MonadFail proposal.")
+           , quotes (ppr zonkedType)
+           , hsep [ ptext (sLit "which does not have a MonadFail instance.")
+                  , ptext (sLit "This will become an error in GHC 7.14,")
+                  , ptext (sLit "under the MonadFail proposal.")
+                  ]
            ]
 
 {-
