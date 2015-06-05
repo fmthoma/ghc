@@ -999,7 +999,7 @@ rn_rec_stmt rnBody _ (L loc (BindStmt pat' body _ _), fv_pat)
        ; xMonadFail <- fmap (xopt Opt_MonadFailDesugaring) getDynFlags
        ; let failFunction | xMonadFail = mfailMName
                           | otherwise  =  failMName
-       ; (fail_op, fvs2) <- lookupStmtName ctxt failFunction
+       ; (fail_op, fvs2) <- lookupSyntaxName failFunction
 
        ; let bndrs = mkNameSet (collectPatBinders pat')
              fvs   = fv_expr `plusFV` fv_pat `plusFV` fvs1 `plusFV` fvs2
