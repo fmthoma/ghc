@@ -508,6 +508,19 @@ original default.
 -- A 'Monad' without a 'MonadFail' instance may only be used in conjunction
 -- with pattern that always match, such as newtypes, tuples, data types with
 -- only a single data constructor, and irrefutable patterns (@~pat@).
+--
+-- Instances of `MonadFail` should satisfy the following law: `mfail s` should
+-- be a left zero for `>>=`,
+--
+-- @
+-- fail s >>= f  =  fail s
+-- @
+--
+-- In particular, if your `Monad` is also `MonadPlus`, a popular definition is
+--
+-- @
+-- mfail _ = mzero
+-- @
 class Monad m => MonadFail m where
     mfail :: String -> m a
 
