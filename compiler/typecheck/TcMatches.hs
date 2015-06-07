@@ -842,15 +842,17 @@ tcDoStmt _ stmt _ _
 tcCheckMissingMonadFailInstance :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 tcCheckMissingMonadFailInstance pattern doExprType = do
 
-    m'monadFailClass <- tcLookupClassMaybe monadFailClassName
-    case m'monadFailClass of
-        Just monadFailClass -> do
-            isMonadFail <- mkIsInstanceOf monadFailClass
-            unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
-        Nothing -> return ()
-    monadFailClass <- tcLookupClass monadFailClassName
-    isMonadFail <- mkIsInstanceOf monadFailClass
-    unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
+    -- m'monadFailClass <- tcLookupClassMaybe monadFailClassName
+    -- case m'monadFailClass of
+    --     Just monadFailClass -> do
+    --         isMonadFail <- mkIsInstanceOf monadFailClass
+    --         unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
+    --     Nothing -> return ()
+    -- monadFailClass <- tcLookupClass monadFailClassName
+    -- isMonadFail <- mkIsInstanceOf monadFailClass
+    -- unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
+
+    emitMissingMonadFailInstanceWarning
 
   where
 
