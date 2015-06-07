@@ -842,17 +842,10 @@ tcDoStmt _ stmt _ _
 tcCheckMissingMonadFailInstance :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 tcCheckMissingMonadFailInstance pattern doExprType = do
 
-    -- m'monadFailClass <- tcLookupClassMaybe monadFailClassName
-    -- case m'monadFailClass of
-    --     Just monadFailClass -> do
-    --         isMonadFail <- mkIsInstanceOf monadFailClass
-    --         unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
-    --     Nothing -> return ()
-    -- monadFailClass <- tcLookupClass monadFailClassName
-    -- isMonadFail <- mkIsInstanceOf monadFailClass
-    -- unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
-
-    emitMissingMonadFailInstanceWarning
+    monadFailClass <- tcLookupClass monadFailClassName
+    isMonadFail <- mkIsInstanceOf monadFailClass
+    trace ("isMonadFail doExprType: " ++ show (isMonadFail doExprType)) (return ())
+    unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
 
   where
 
@@ -876,16 +869,9 @@ tcCheckMissingMonadFailInstance pattern doExprType = do
             isMonadFail ty =
                 -- TODO/quchen: Consider the snd ("do not match but unify")
                 -- vvvvvvvvvvv  elements as well?
-                let (matches, _, _) = lookupMonadFail [ty]
-                in not (null matches)
+                let (matches, unifies, _) = lookupMonadFail [ty]
+                in not (null matches) || not (null unifies)
         return isMonadFail
-
--- | Looks up a class, returning Nothing on failure. Similar to
---   TcEnv.tcLookupClass, but does not issue any error messages.
-tcLookupClassMaybe :: Name -> TcM (Maybe Class)
-tcLookupClassMaybe = fmap toMaybe . tryTc . tcLookupClass
-    where toMaybe (_, Just cls) = Just cls
-          toMaybe _             = Nothing
 
 {-
 Note [Treat rebindable syntax first]
