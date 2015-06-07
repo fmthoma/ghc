@@ -860,7 +860,7 @@ failMName          = varQual gHC_BASE (fsLit "fail")   failMClassOpKey
 
 -- Class MonadFail
 monadFailClassName, mfailMName :: Name
-monadFailClassName = varQual gHC_BASE (fsLit "MonadFail") monadFailClassKey
+monadFailClassName = clsQual gHC_BASE (fsLit "MonadFail") monadFailClassKey
 mfailMName         = varQual gHC_BASE (fsLit "mfail")     mfailMClassOpKey
 
 -- Classes (Applicative, Foldable, Traversable)
