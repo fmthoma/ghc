@@ -38,8 +38,9 @@ import Util
 import SrcLoc
 import FastString
 import DynFlags
-import Class
 import InstEnv
+import PrelNames (monadFailClassName)
+import Class
 
 -- Create chunkified tuple tybes for monad comprehensions
 import MkCore
@@ -841,33 +842,48 @@ tcDoStmt _ stmt _ _
 tcCheckMissingMonadFailInstance :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 tcCheckMissingMonadFailInstance pattern doExprType = do
 
-    isInstanceOf <- mkIsInstanceOf
-
-    tidyEnv <- tcInitTidyEnv
-    (_, zonkedType) <- zonkTidyTcType tidyEnv doExprType
-    addWarnAt (getLoc pattern) . vcat $
-           [ ptext (sLit "The failable pattern")
-           , quotes (ppr pattern)
-           , ptext (sLit "is used in the context")
-           , quotes (ppr zonkedType)
-           , hsep [ ptext (sLit "which does not have a MonadFail instance.")
-                  , ptext (sLit "This will become an error in GHC 7.14,")
-                  , ptext (sLit "under the MonadFail proposal.")
-                  ]
-           ]
+    m'monadFailClass <- tcLookupClassMaybe monadFailClassName
+    case m'monadFailClass of
+        Just monadFailClass -> do
+            isMonadFail <- mkIsInstanceOf monadFailClass
+            unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
+        Nothing -> return ()
+    monadFailClass <- tcLookupClass monadFailClassName
+    isMonadFail <- mkIsInstanceOf monadFailClass
+    unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
 
   where
 
-    -- Create an instanceOf lookup in the current TcM environment
-    mkIsInstanceOf :: TcM (Class -> Type -> Bool)
-    mkIsInstanceOf = do
+    emitMissingMonadFailInstanceWarning = do
+        tidyEnv <- tcInitTidyEnv
+        (_, zonkedType) <- zonkTidyTcType tidyEnv doExprType
+        addWarnAt (getLoc pattern) . hsep $
+               [ ptext (sLit "The failable pattern")
+               , quotes (ppr pattern)
+               , ptext (sLit "is used in the context")
+               , quotes (ppr zonkedType)
+               , ptext (sLit "which does not have a MonadFail instance.")
+               , ptext (sLit "This will become an error in GHC 7.14,")
+               , ptext (sLit "under the MonadFail proposal.")
+               ]
+
+    mkIsInstanceOf :: Class -> TcM (Type -> Bool)
+    mkIsInstanceOf typeclass = do
         instEnvs <- tcGetInstEnvs
-        let isInstanceOf cl ty =
-                let (matches, _, _) = lookupInstEnv False instEnvs cl [ty]
-                    -- TODO/quchen: Consider the snd ("do not match but unify")
-                    --              elements as well?
+        let lookupMonadFail = lookupInstEnv False instEnvs typeclass
+            isMonadFail ty =
+                -- TODO/quchen: Consider the snd ("do not match but unify")
+                -- vvvvvvvvvvv  elements as well?
+                let (matches, _, _) = lookupMonadFail [ty]
                 in not (null matches)
-        return isInstanceOf
+        return isMonadFail
+
+-- | Looks up a class, returning Nothing on failure. Similar to
+--   TcEnv.tcLookupClass, but does not issue any error messages.
+tcLookupClassMaybe :: Name -> TcM (Maybe Class)
+tcLookupClassMaybe = fmap toMaybe . tryTc . tcLookupClass
+    where toMaybe (_, Just cls) = Just cls
+          toMaybe _             = Nothing
 
 {-
 Note [Treat rebindable syntax first]
