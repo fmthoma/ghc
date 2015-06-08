@@ -1137,6 +1137,13 @@ glom it together with the first two groups
      { rec { x <- ...y...; p <- z ; y <- ...x... ;
              q <- x ; z <- y } ;
        r <- x }
+
+Note [Implement MonadFail desugaring]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order to activate desugaring to `mfail` instead of `mfail`, requiring a
+`MonadFail` constraint when a failable match is done in do-notation, simply
+change the "failMName" to "mfailMName".
 -}
 
 glomSegments :: HsStmtContext Name
