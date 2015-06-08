@@ -7,6 +7,7 @@ TcMatches: Typecheck some @Matches@
 -}
 
 {-# LANGUAGE CPP, RankNTypes #-}
+{-# LANGUAGE MultiWayIf #-}
 
 module TcMatches ( tcMatchesFun, tcGRHS, tcGRHSsPat, tcMatchesCase, tcMatchLambda,
                    TcMatchCtxt(..), TcStmtChecker, TcExprStmtChecker, TcCmdStmtChecker,
@@ -37,6 +38,8 @@ import Util
 import SrcLoc
 import FastString
 import DynFlags
+import Class
+import InstEnv
 
 -- Create chunkified tuple tybes for monad comprehensions
 import MkCore
@@ -760,14 +763,21 @@ tcDoStmt ctxt (BindStmt pat rhs bind_op fail_op) res_ty thing_inside
         ; fail_op' <- if isIrrefutableHsPat pat'
             then return noSyntaxExpr
             else do
-                warnFlag <- woptM Opt_WarnMissingMonadFailInstance
-                when warnFlag (tcCheckMissingMonadFailInstance pat new_res_ty)
-                            -- MARKER/quchen
-                            -- ctxt :: HsStmtContext Name
-                            -- bindStmt :: Stmt Name (Located (HsExpr Name))
+                emitWarnings <- emitMonadFailWarnings
+                when emitWarnings (tcCheckMissingMonadFailInstance pat new_res_ty)
+                          -- MARKER/quchen TODO/fmthoma: res_ty or new_res_ty?
                 tcSyntaxOp DoOrigin fail_op (mkFunTy stringTy new_res_ty)
 
         ; return (BindStmt pat' rhs' bind_op' fail_op', thing) }
+
+  where
+
+    emitMonadFailWarnings = do
+        desugarFlag <- fmap (xopt Opt_MonadFailDesugaring) getDynFlags
+        warnFlag <- woptM Opt_WarnMissingMonadFailInstance
+        return $ if | desugarFlag -> False -- No warnings if MonadFail is live
+                    | warnFlag    -> True  -- Otherwise warnings if they're turned on
+                    | otherwise   -> False
 
 
 tcDoStmt _ (BodyStmt rhs then_op _ _) res_ty thing_inside
@@ -830,11 +840,14 @@ tcDoStmt _ stmt _ _
 -- MonadFail Proposal
 tcCheckMissingMonadFailInstance :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 tcCheckMissingMonadFailInstance pattern doExprType = do
+
+    isInstanceOf <- mkIsInstanceOf
+
     tidyEnv <- tcInitTidyEnv
     (_, zonkedType) <- zonkTidyTcType tidyEnv doExprType
     addWarnAt (getLoc pattern) . vcat $
            [ ptext (sLit "The failable pattern")
-           , quotes (hsep [ppr pattern, ptext (sLit " <- ... ")])
+           , quotes (ppr pattern)
            , ptext (sLit "is used in the context")
            , quotes (ppr zonkedType)
            , hsep $ [ ptext (sLit "which does not have a MonadFail instance.")
@@ -842,6 +855,19 @@ tcCheckMissingMonadFailInstance pattern doExprType = do
                     , ptext (sLit "under the MonadFail proposal.")
                     ]
            ]
+
+  where
+
+    -- Create an instanceOf lookup in the current TcM environment
+    mkIsInstanceOf :: TcM (Class -> Type -> Bool)
+    mkIsInstanceOf = do
+        instEnvs <- tcGetInstEnvs
+        let isInstanceOf cl ty =
+                let (matches, _, _) = lookupInstEnv False instEnvs cl [ty]
+                    -- TODO/quchen: Consider the snd ("do not match but unify")
+                    --              elements as well?
+                in not (null matches)
+        return isInstanceOf
 
 {-
 Note [Treat rebindable syntax first]
