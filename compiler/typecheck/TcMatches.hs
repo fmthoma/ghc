@@ -827,18 +827,20 @@ tcDoStmt _ stmt _ _
   = pprPanic "tcDoStmt: unexpected Stmt" (ppr stmt)
 
 
-
-tcCheckMissingMonadFailInstance :: Outputable a => LPat a -> TcType -> TcRn ()
-tcCheckMissingMonadFailInstance pattern doExprType =
-    addWarnAt (getLoc pattern) . hsep $
-           [ quotes (ppr pattern)
+-- MonadFail Proposal
+tcCheckMissingMonadFailInstance :: OutputableBndr a => LPat a -> TcType -> TcRn ()
+tcCheckMissingMonadFailInstance pattern doExprType = do
+    tidyEnv <- tcInitTidyEnv
+    (_, zonkedType) <- zonkTidyTcType tidyEnv doExprType
+    addWarnAt (getLoc pattern) . vcat $
+           [ ptext (sLit "The failable pattern")
+           , quotes (hsep [ppr pattern, ptext (sLit " <- ... ")])
            , ptext (sLit "is used in the context")
-           , quotes (ppr doExprType)
-           -- MARKER/quchen
-           -- , ptext (sLit "does not have a MonadFail instance, but")
-           -- , ptext (sLit "is used to bind to a failable pattern.")
-           -- , ptext (sLit "This will become an error in GHC 7.14,")
-           -- , ptext (sLit "under the MonadFail proposal.")
+           , quotes (ppr zonkedType)
+           , hsep $ [ ptext (sLit "which does not have a MonadFail instance.")
+                    , ptext (sLit "This will become an error in GHC 7.14,")
+                    , ptext (sLit "under the MonadFail proposal.")
+                    ]
            ]
 
 {-
