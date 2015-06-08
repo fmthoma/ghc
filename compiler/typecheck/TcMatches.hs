@@ -842,20 +842,17 @@ tcDoStmt _ stmt _ _
 tcCheckMissingMonadFailInstance :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 tcCheckMissingMonadFailInstance pattern doExprType = do
 
-    isInstanceOf <- mkIsInstanceOf
+    -- m'monadFailClass <- tcLookupClassMaybe monadFailClassName
+    -- case m'monadFailClass of
+    --     Just monadFailClass -> do
+    --         isMonadFail <- mkIsInstanceOf monadFailClass
+    --         unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
+    --     Nothing -> return ()
+    -- monadFailClass <- tcLookupClass monadFailClassName
+    -- isMonadFail <- mkIsInstanceOf monadFailClass
+    -- unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
 
-    tidyEnv <- tcInitTidyEnv
-    (_, zonkedType) <- zonkTidyTcType tidyEnv doExprType
-    addWarnAt (getLoc pattern) . vcat $
-           [ ptext (sLit "The failable pattern")
-           , quotes (ppr pattern)
-           , ptext (sLit "is used in the context")
-           , quotes (ppr zonkedType)
-           , hsep $ [ ptext (sLit "which does not have a MonadFail instance.")
-                    , ptext (sLit "This will become an error in GHC 7.14,")
-                    , ptext (sLit "under the MonadFail proposal.")
-                    ]
-           ]
+    emitMissingMonadFailInstanceWarning
 
   where
 
