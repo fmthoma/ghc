@@ -248,7 +248,7 @@ basicKnownKeyNames
         fmapName,
         joinMName,
 
-        mondFailClassName, mfailMName,
+        monadFailClassName, mfailMName,
 
         -- MonadRec stuff
         mfixName,
@@ -859,8 +859,8 @@ returnMName        = varQual gHC_BASE (fsLit "return") returnMClassOpKey
 failMName          = varQual gHC_BASE (fsLit "fail")   failMClassOpKey
 
 -- Class MonadFail
-mondFailClassName, mfailMName :: Name
-mondFailClassName  = varQual gHC_BASE (fsLit "MonadFail") monadFailClassKey
+monadFailClassName, mfailMName :: Name
+monadFailClassName = varQual gHC_BASE (fsLit "MonadFail") monadFailClassKey
 mfailMName         = varQual gHC_BASE (fsLit "mfail")     mfailMClassOpKey
 
 -- Classes (Applicative, Foldable, Traversable)
