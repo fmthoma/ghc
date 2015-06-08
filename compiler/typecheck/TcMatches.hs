@@ -865,13 +865,12 @@ tcCheckMissingMonadFailInstance pattern doExprType = do
     mkIsInstanceOf :: Class -> TcM (Type -> Bool)
     mkIsInstanceOf typeclass = do
         instEnvs <- tcGetInstEnvs
-        let lookupMonadFail = lookupInstEnv False instEnvs typeclass
-            isMonadFail ty =
-                -- TODO/quchen: Consider the snd ("do not match but unify")
-                -- vvvvvvvvvvv  elements as well?
-                let (matches, unifies, _) = lookupMonadFail [ty]
-                in not (null matches) || not (null unifies)
-        return isMonadFail
+        let lookupInstanceFor = lookupInstEnv False instEnvs typeclass
+            has = not . null
+            isInstanceOf ty =
+                let (matches, unifies, _) = lookupInstanceFor [ty]
+                in has matches || has unifies
+        return isInstanceOf
 
 {-
 Note [Treat rebindable syntax first]
