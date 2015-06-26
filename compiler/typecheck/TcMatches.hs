@@ -842,35 +842,33 @@ tcDoStmt _ stmt _ _
 -- MonadFail Proposal
 tcCheckMissingMonadFail :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 tcCheckMissingMonadFail pattern doExprType = do
-
+    instEnvs <- tcGetInstEnvs
     monadFailClass <- tcLookupClass monadFailClassName
-    isMonadFail <- mkIsInstanceOf monadFailClass
-    unless (isMonadFail doExprType) emitWarning
+    unless (isInstanceOf instEnvs monadFailClass doExprType)
+           emitWarning
 
   where
 
+    emitWarning :: TcRn ()
     emitWarning = do
         tidyEnv <- tcInitTidyEnv
         (_, zonkedType) <- zonkTidyTcType tidyEnv doExprType
         addWarnAt (getLoc pattern)
             (text "The failable pattern" <+> quotes (ppr pattern)
-            $$
-            nest 2 (text "is used in the context"
-                        <+> quotes (ppr (topmostTypeConstr zonkedType))
-                        <> text ", which does not have a MonadFail instance."
-                    $$
-                    text "This will become an error in GHC 7.14,"
-                        <+> text "under the MonadFail proposal."))
+             $$
+             nest 2 (text "is used in the context"
+                         <+> quotes (ppr (topmostTypeConstr zonkedType))
+                         <> text ", which does not have a MonadFail instance."
+                     $$
+                     text "This will become an error in GHC 7.14,"
+                         <+> text "under the MonadFail proposal."))
 
-    mkIsInstanceOf :: Class -> TcM (Type -> Bool)
-    mkIsInstanceOf typeclass = do
-        instEnvs <- tcGetInstEnvs
+    isInstanceOf :: InstEnvs -> Class -> Type -> Bool
+    isInstanceOf instEnvs typeclass ty =
         let lookupInstanceFor = lookupInstEnv instEnvs typeclass
+            (matches, unifies, _) = lookupInstanceFor [ty]
             has = not . null
-            isInstanceOf ty =
-                let (matches, unifies, _) = lookupInstanceFor [ty]
-                in has matches || has unifies
-        return isInstanceOf
+        in has matches || has unifies
 
     topmostTypeConstr :: TcType -> TcType
     topmostTypeConstr ty = case splitAppTy ty of (con, _rest) -> con
