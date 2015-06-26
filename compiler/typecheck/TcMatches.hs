@@ -41,6 +41,7 @@ import DynFlags
 import InstEnv
 import PrelNames (monadFailClassName)
 import Class
+import Type
 
 -- Create chunkified tuple tybes for monad comprehensions
 import MkCore
@@ -844,7 +845,6 @@ tcCheckMissingMonadFailInstance pattern doExprType = do
 
     monadFailClass <- tcLookupClass monadFailClassName
     isMonadFail <- mkIsInstanceOf monadFailClass
-    trace ("isMonadFail doExprType: " ++ show (isMonadFail doExprType)) (return ())
     unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
 
   where
@@ -856,7 +856,7 @@ tcCheckMissingMonadFailInstance pattern doExprType = do
                [ ptext (sLit "The failable pattern")
                , quotes (ppr pattern)
                , ptext (sLit "is used in the context")
-               , quotes (ppr zonkedType)
+               , quotes (ppr (topmostTypeConstr zonkedType))
                , ptext (sLit "which does not have a MonadFail instance.")
                , ptext (sLit "This will become an error in GHC 7.14,")
                , ptext (sLit "under the MonadFail proposal.")
@@ -865,12 +865,17 @@ tcCheckMissingMonadFailInstance pattern doExprType = do
     mkIsInstanceOf :: Class -> TcM (Type -> Bool)
     mkIsInstanceOf typeclass = do
         instEnvs <- tcGetInstEnvs
-        let lookupInstanceFor = lookupInstEnv False instEnvs typeclass
+        let lookupInstanceFor = lookupInstEnv instEnvs typeclass
             has = not . null
             isInstanceOf ty =
                 let (matches, unifies, _) = lookupInstanceFor [ty]
                 in has matches || has unifies
         return isInstanceOf
+
+    topmostTypeConstr :: TcType -> TcType
+    topmostTypeConstr ty = case splitFunTy ty of (con, _rest) -> con
+
+
 
 {-
 Note [Treat rebindable syntax first]
