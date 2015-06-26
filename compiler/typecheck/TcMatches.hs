@@ -766,7 +766,7 @@ tcDoStmt ctxt (BindStmt pat rhs bind_op fail_op) res_ty thing_inside
             then return noSyntaxExpr
             else do
                 emitWarnings <- emitMonadFailWarnings
-                when emitWarnings (tcCheckMissingMonadFailInstance pat new_res_ty)
+                when emitWarnings (tcCheckMissingMonadFail pat new_res_ty)
                           -- MARKER/quchen TODO/fmthoma: res_ty or new_res_ty?
                 tcSyntaxOp DoOrigin fail_op (mkFunTy stringTy new_res_ty)
 
@@ -840,27 +840,27 @@ tcDoStmt _ stmt _ _
 
 
 -- MonadFail Proposal
-tcCheckMissingMonadFailInstance :: OutputableBndr a => LPat a -> TcType -> TcRn ()
-tcCheckMissingMonadFailInstance pattern doExprType = do
+tcCheckMissingMonadFail :: OutputableBndr a => LPat a -> TcType -> TcRn ()
+tcCheckMissingMonadFail pattern doExprType = do
 
     monadFailClass <- tcLookupClass monadFailClassName
     isMonadFail <- mkIsInstanceOf monadFailClass
-    unless (isMonadFail doExprType) emitMissingMonadFailInstanceWarning
+    unless (isMonadFail doExprType) emitWarning
 
   where
 
-    emitMissingMonadFailInstanceWarning = do
+    emitWarning = do
         tidyEnv <- tcInitTidyEnv
         (_, zonkedType) <- zonkTidyTcType tidyEnv doExprType
-        addWarnAt (getLoc pattern) . hsep $
-               [ ptext (sLit "The failable pattern")
-               , quotes (ppr pattern)
-               , ptext (sLit "is used in the context")
-               , quotes (ppr (topmostTypeConstr zonkedType))
-               , ptext (sLit "which does not have a MonadFail instance.")
-               , ptext (sLit "This will become an error in GHC 7.14,")
-               , ptext (sLit "under the MonadFail proposal.")
-               ]
+        addWarnAt (getLoc pattern)
+            (text "The failable pattern" <+> quotes (ppr pattern)
+            $$
+            nest 2 (text "is used in the context"
+                        <+> quotes (ppr (topmostTypeConstr zonkedType))
+                        <> text ", which does not have a MonadFail instance."
+                    $$
+                    text "This will become an error in GHC 7.14,"
+                        <+> text "under the MonadFail proposal."))
 
     mkIsInstanceOf :: Class -> TcM (Type -> Bool)
     mkIsInstanceOf typeclass = do
@@ -873,7 +873,7 @@ tcCheckMissingMonadFailInstance pattern doExprType = do
         return isInstanceOf
 
     topmostTypeConstr :: TcType -> TcType
-    topmostTypeConstr ty = case splitFunTy ty of (con, _rest) -> con
+    topmostTypeConstr ty = case splitAppTy ty of (con, _rest) -> con
 
 
 
