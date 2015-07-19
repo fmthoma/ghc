@@ -766,8 +766,7 @@ tcDoStmt ctxt (BindStmt pat rhs bind_op fail_op) res_ty thing_inside
             then return noSyntaxExpr
             else do
                 emitWarnings <- emitMonadFailWarnings
-                when emitWarnings (tcCheckMissingMonadFail pat new_res_ty)
-                          -- MARKER/quchen TODO/fmthoma: res_ty or new_res_ty?
+                when emitWarnings (checkMissingMonadFail pat new_res_ty) -- MARKER/quchen TODO/fmthoma: res_ty or new_res_ty?
                 tcSyntaxOp DoOrigin fail_op (mkFunTy stringTy new_res_ty)
 
         ; return (BindStmt pat' rhs' bind_op' fail_op', thing) }
@@ -840,8 +839,8 @@ tcDoStmt _ stmt _ _
 
 
 -- MonadFail Proposal
-tcCheckMissingMonadFail :: OutputableBndr a => LPat a -> TcType -> TcRn ()
-tcCheckMissingMonadFail pattern doExprType = do
+checkMissingMonadFail :: LPat TcId -> TcType -> TcRn ()
+checkMissingMonadFail pattern doExprType = do
     instEnvs <- tcGetInstEnvs
     monadFailClass <- tcLookupClass monadFailClassName
     unless (isInstanceOf instEnvs monadFailClass doExprType)
@@ -857,21 +856,27 @@ tcCheckMissingMonadFail pattern doExprType = do
             (text "The failable pattern" <+> quotes (ppr pattern)
              $$
              nest 2 (text "is used in the context"
-                         <+> quotes (ppr (topmostTypeConstr zonkedType))
+                         <+> quotes (ppr (tyHead zonkedType))
                          <> text ", which does not have a MonadFail instance."
                      $$
-                     text "This will become an error in GHC 7.14,"
-                         <+> text "under the MonadFail proposal."))
+                     text "This will become an error in GHC 7.14, \
+                          \under the MonadFail proposal."))
 
     isInstanceOf :: InstEnvs -> Class -> Type -> Bool
     isInstanceOf instEnvs typeclass ty =
-        let lookupInstanceFor = lookupInstEnv instEnvs typeclass
-            (matches, unifies, _) = lookupInstanceFor [ty]
+        let (matches, unifies, _) = lookupInstEnv instEnvs typeclass [ty]
             has = not . null
         in has matches || has unifies
 
-    topmostTypeConstr :: TcType -> TcType
-    topmostTypeConstr ty = case splitAppTy ty of (con, _rest) -> con
+    tyHead :: TcType -> TcType
+    tyHead ty =
+        -- MARKER/quchen: This won't report (r ->) correctly. Should we
+        --                do other splits as well? There are multiple other
+        --                split*_maybe functions available.
+        case splitAppTy_maybe ty of
+            Just (con, _) -> con
+            Nothing -> panic "MonadFail check applied to \
+                             \non-constructor application"
 
 
 

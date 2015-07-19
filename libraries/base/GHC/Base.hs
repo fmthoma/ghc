@@ -513,7 +513,7 @@ original default.
 -- fail s >>= f  =  fail s
 -- @
 --
--- In particular, if your `Monad` is also `MonadPlus`, a popular definition is
+-- If your `Monad` is also `MonadPlus`, a popular definition is
 --
 -- @
 -- mfail _ = mzero
