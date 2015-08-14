@@ -841,32 +841,39 @@ tcDoStmt _ stmt _ _
 -- MonadFail Proposal
 checkMissingMonadFail :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 checkMissingMonadFail pattern doExprType = do
-    tidyEnv <- tcInitTidyEnv
-    (_, zonkedType) <- zonkTidyTcType tidyEnv doExprType
-    instEnvs <- tcGetInstEnvs
+    doExprTypeHead <- tyHead <$> zonkType doExprType
     monadFailClass <- tcLookupClass monadFailClassName
-    unless (isInstanceOf instEnvs monadFailClass zonkedType)
-           (emitWarning zonkedType)
+    hasMonadFailInstance <- isInstanceOf monadFailClass doExprTypeHead
+
+    unless hasMonadFailInstance (emitWarning doExprTypeHead)
 
   where
 
     emitWarning :: TcType -> TcRn ()
-    emitWarning zonkedType = do
+    emitWarning zonkedTypeHead = do
         addWarnAt (getLoc pattern)
             (text "The failable pattern" <+> quotes (ppr pattern)
              $$
              nest 2 (text "is used in the context"
-                         <+> quotes (ppr (tyHead zonkedType))
+                         <+> quotes (ppr zonkedTypeHead)
                          <> text ", which does not have a MonadFail instance."
                      $$
                      text "This will become an error in GHC 7.14,"
                          <+> text "under the MonadFail proposal."))
 
-    isInstanceOf :: InstEnvs -> Class -> Type -> Bool
-    isInstanceOf instEnvs typeclass ty =
-        let (matches, unifies, _) = lookupInstEnv instEnvs typeclass [tyHead ty]
+    isInstanceOf :: Class -> Type -> TcRn Bool
+    isInstanceOf typeclass zonkedTypeHead = do
+        instEnvs <- tcGetInstEnvs
+        let (matches, unifies, _) = lookupInstEnv instEnvs typeclass [zonkedTypeHead]
             has = not . null
-        in has matches || has unifies
+        return (has matches || has unifies)
+
+    zonkType :: TcType -> TcRn TcType
+    zonkType ty = do
+        tidyEnv <- tcInitTidyEnv
+        (_, zonkedType) <- zonkTidyTcType tidyEnv ty
+        return zonkedType
+
 
     tyHead :: TcType -> TcType
     tyHead ty =
