@@ -839,7 +839,7 @@ tcDoStmt _ stmt _ _
 
 
 -- MonadFail Proposal
-checkMissingMonadFail :: LPat TcId -> TcType -> TcRn ()
+checkMissingMonadFail :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 checkMissingMonadFail pattern doExprType = do
     instEnvs <- tcGetInstEnvs
     monadFailClass <- tcLookupClass monadFailClassName
@@ -859,8 +859,8 @@ checkMissingMonadFail pattern doExprType = do
                          <+> quotes (ppr (tyHead zonkedType))
                          <> text ", which does not have a MonadFail instance."
                      $$
-                     text "This will become an error in GHC 7.14, \
-                          \under the MonadFail proposal."))
+                     text "This will become an error in GHC 7.14,"
+                         <+> text "under the MonadFail proposal."))
 
     isInstanceOf :: InstEnvs -> Class -> Type -> Bool
     isInstanceOf instEnvs typeclass ty =
@@ -875,8 +875,7 @@ checkMissingMonadFail pattern doExprType = do
         --                split*_maybe functions available.
         case splitAppTy_maybe ty of
             Just (con, _) -> con
-            Nothing -> panic "MonadFail check applied to \
-                             \non-constructor application"
+            Nothing -> panic "MonadFail check applied to non-constructor application"
 
 
 
