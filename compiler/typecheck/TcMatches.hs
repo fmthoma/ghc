@@ -841,17 +841,17 @@ tcDoStmt _ stmt _ _
 -- MonadFail Proposal
 checkMissingMonadFail :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 checkMissingMonadFail pattern doExprType = do
+    tidyEnv <- tcInitTidyEnv
+    (_, zonkedType) <- zonkTidyTcType tidyEnv doExprType
     instEnvs <- tcGetInstEnvs
     monadFailClass <- tcLookupClass monadFailClassName
-    unless (isInstanceOf instEnvs monadFailClass doExprType)
-           emitWarning
+    unless (isInstanceOf instEnvs monadFailClass zonkedType)
+           (emitWarning zonkedType)
 
   where
 
-    emitWarning :: TcRn ()
-    emitWarning = do
-        tidyEnv <- tcInitTidyEnv
-        (_, zonkedType) <- zonkTidyTcType tidyEnv doExprType
+    emitWarning :: TcType -> TcRn ()
+    emitWarning zonkedType = do
         addWarnAt (getLoc pattern)
             (text "The failable pattern" <+> quotes (ppr pattern)
              $$
@@ -864,7 +864,7 @@ checkMissingMonadFail pattern doExprType = do
 
     isInstanceOf :: InstEnvs -> Class -> Type -> Bool
     isInstanceOf instEnvs typeclass ty =
-        let (matches, unifies, _) = lookupInstEnv instEnvs typeclass [ty]
+        let (matches, unifies, _) = lookupInstEnv instEnvs typeclass [tyHead ty]
             has = not . null
         in has matches || has unifies
 
