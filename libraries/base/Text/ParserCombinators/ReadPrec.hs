@@ -64,6 +64,8 @@ import qualified Text.ParserCombinators.ReadP as ReadP
 import GHC.Num( Num(..) )
 import GHC.Base
 
+import qualified Control.Monad.Fail
+
 -- ---------------------------------------------------------------------------
 -- The readPrec type
 
@@ -81,6 +83,9 @@ instance Applicative ReadPrec where
 instance Monad ReadPrec where
   fail s    = P (\_ -> fail s)
   P f >>= k = P (\n -> do a <- f n; let P f' = k a in f' n)
+
+instance Control.Monad.Fail.MonadFail ReadPrec where
+  fail s    = P (\_ -> fail s)
 
 instance MonadPlus ReadPrec where
   mzero = pfail

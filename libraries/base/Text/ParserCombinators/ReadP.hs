@@ -76,6 +76,8 @@ import GHC.Unicode ( isSpace )
 import GHC.List ( replicate, null )
 import GHC.Base hiding ( many )
 
+import qualified Control.Monad.Fail
+
 infixr 5 +++, <++
 
 ------------------------------------------------------------------------
@@ -118,6 +120,10 @@ instance Monad P where
   (Final r)    >>= k = final [ys' | (x,s) <- r, ys' <- run (k x) s]
 
   fail _ = Fail
+
+instance Control.Monad.Fail.MonadFail P where
+  fail _ = Fail
+
 
 instance Alternative P where
   empty = Fail
@@ -165,6 +171,9 @@ instance Applicative ReadP where
 instance Monad ReadP where
   fail _    = R (\_ -> Fail)
   R m >>= f = R (\k -> m (\a -> let R m' = f a in m' k))
+
+instance Control.Monad.Fail.MonadFail ReadP where
+  fail _    = R (\_ -> Fail)
 
 instance Alternative ReadP where
     empty = mzero

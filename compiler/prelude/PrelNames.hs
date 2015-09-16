@@ -239,10 +239,11 @@ basicKnownKeyNames
         apAName,
 
         -- Monad stuff
-        thenIOName, bindIOName, returnIOName, failIOName,
-        failMName, bindMName, thenMName, returnMName,
-        fmapName,
-        joinMName,
+        thenIOName, bindIOName, returnIOName, failIOName, bindMName, thenMName,
+        returnMName, fmapName, joinMName,
+
+        -- MonadFail
+        monadFailClassName, failMName, failMName_preMFP,
 
         -- MonadFix
         monadFixClassName, mfixName,
@@ -398,7 +399,7 @@ gHC_PRIM, gHC_TYPES, gHC_GENERICS, gHC_MAGIC,
     gHC_ST, gHC_ARR, gHC_STABLE, gHC_PTR, gHC_ERR, gHC_REAL,
     gHC_FLOAT, gHC_TOP_HANDLER, sYSTEM_IO, dYNAMIC,
     tYPEABLE, tYPEABLE_INTERNAL, gENERICS,
-    rEAD_PREC, lEX, gHC_INT, gHC_WORD, mONAD, mONAD_FIX, mONAD_ZIP,
+    rEAD_PREC, lEX, gHC_INT, gHC_WORD, mONAD, mONAD_FIX, mONAD_ZIP, mONAD_FAIL,
     aRROW, cONTROL_APPLICATIVE, gHC_DESUGAR, rANDOM, gHC_EXTS,
     cONTROL_EXCEPTION_BASE, gHC_TYPELITS :: Module
 
@@ -446,6 +447,7 @@ gHC_WORD        = mkBaseModule (fsLit "GHC.Word")
 mONAD           = mkBaseModule (fsLit "Control.Monad")
 mONAD_FIX       = mkBaseModule (fsLit "Control.Monad.Fix")
 mONAD_ZIP       = mkBaseModule (fsLit "Control.Monad.Zip")
+mONAD_FAIL      = mkBaseModule (fsLit "Control.Monad.Fail")
 aRROW           = mkBaseModule (fsLit "Control.Arrow")
 cONTROL_APPLICATIVE = mkBaseModule (fsLit "Control.Applicative")
 gHC_DESUGAR = mkBaseModule (fsLit "GHC.Desugar")
@@ -553,11 +555,12 @@ map_RDR, append_RDR :: RdrName
 map_RDR                 = varQual_RDR gHC_BASE (fsLit "map")
 append_RDR              = varQual_RDR gHC_BASE (fsLit "++")
 
-foldr_RDR, build_RDR, returnM_RDR, bindM_RDR, failM_RDR :: RdrName
+foldr_RDR, build_RDR, returnM_RDR, bindM_RDR, failM_RDR_preMFP, failM_RDR:: RdrName
 foldr_RDR               = nameRdrName foldrName
 build_RDR               = nameRdrName buildName
 returnM_RDR             = nameRdrName returnMName
 bindM_RDR               = nameRdrName bindMName
+failM_RDR_preMFP        = nameRdrName failMName_preMFP
 failM_RDR               = nameRdrName failMName
 
 left_RDR, right_RDR :: RdrName
@@ -899,12 +902,17 @@ functorClassName  = clsQual gHC_BASE    (fsLit "Functor") functorClassKey
 fmapName          = varQual gHC_BASE    (fsLit "fmap")    fmapClassOpKey
 
 -- Class Monad
-monadClassName, thenMName, bindMName, returnMName, failMName :: Name
+monadClassName, thenMName, bindMName, returnMName, failMName_preMFP :: Name
 monadClassName     = clsQual gHC_BASE (fsLit "Monad")  monadClassKey
 thenMName          = varQual gHC_BASE (fsLit ">>")     thenMClassOpKey
 bindMName          = varQual gHC_BASE (fsLit ">>=")    bindMClassOpKey
 returnMName        = varQual gHC_BASE (fsLit "return") returnMClassOpKey
-failMName          = varQual gHC_BASE (fsLit "fail")   failMClassOpKey
+failMName_preMFP   = varQual gHC_BASE (fsLit "fail")   failMClassOpKey_preMFP
+
+-- Class MonadFail
+monadFailClassName, failMName :: Name
+monadFailClassName = clsQual mONAD_FAIL (fsLit "MonadFail") monadFailClassKey
+failMName          = varQual mONAD_FAIL (fsLit "fail")      failMClassOpKey
 
 -- Classes (Applicative, Foldable, Traversable)
 applicativeClassName, foldableClassName, traversableClassName :: Name
@@ -1342,6 +1350,9 @@ typeable7ClassKey       = mkPreludeClassUnique 27
 
 monadFixClassKey :: Unique
 monadFixClassKey        = mkPreludeClassUnique 28
+
+monadFailClassKey :: Unique
+monadFailClassKey       = mkPreludeClassUnique 29
 
 monadPlusClassKey, randomClassKey, randomGenClassKey :: Unique
 monadPlusClassKey       = mkPreludeClassUnique 30
@@ -1890,14 +1901,14 @@ uniques so we can look them up easily when we want to conjure them up
 during type checking.
 -}
 
-        -- Just a place holder for  unbound variables  produced by the renamer:
+-- Just a placeholder for unbound variables produced by the renamer:
 unboundKey :: Unique
 unboundKey                    = mkPreludeMiscIdUnique 158
 
 fromIntegerClassOpKey, minusClassOpKey, fromRationalClassOpKey,
     enumFromClassOpKey, enumFromThenClassOpKey, enumFromToClassOpKey,
     enumFromThenToClassOpKey, eqClassOpKey, geClassOpKey, negateClassOpKey,
-    failMClassOpKey, bindMClassOpKey, thenMClassOpKey, returnMClassOpKey,
+    failMClassOpKey_preMFP, bindMClassOpKey, thenMClassOpKey, returnMClassOpKey,
     fmapClassOpKey
     :: Unique
 fromIntegerClassOpKey         = mkPreludeMiscIdUnique 160
@@ -1910,7 +1921,7 @@ enumFromThenToClassOpKey      = mkPreludeMiscIdUnique 166
 eqClassOpKey                  = mkPreludeMiscIdUnique 167
 geClassOpKey                  = mkPreludeMiscIdUnique 168
 negateClassOpKey              = mkPreludeMiscIdUnique 169
-failMClassOpKey               = mkPreludeMiscIdUnique 170
+failMClassOpKey_preMFP        = mkPreludeMiscIdUnique 170
 bindMClassOpKey               = mkPreludeMiscIdUnique 171 -- (>>=)
 thenMClassOpKey               = mkPreludeMiscIdUnique 172 -- (>>)
 fmapClassOpKey                = mkPreludeMiscIdUnique 173
@@ -1919,6 +1930,10 @@ returnMClassOpKey             = mkPreludeMiscIdUnique 174
 -- Recursive do notation
 mfixIdKey :: Unique
 mfixIdKey       = mkPreludeMiscIdUnique 175
+
+-- MonadFail operations
+failMClassOpKey :: Unique
+failMClassOpKey = mkPreludeMiscIdUnique 176
 
 -- Arrow notation
 arrAIdKey, composeAIdKey, firstAIdKey, appAIdKey, choiceAIdKey,
@@ -2024,7 +2039,7 @@ standardClassKeys :: [Unique]
 standardClassKeys = derivableClassKeys ++ numericClassKeys
                   ++ [randomClassKey, randomGenClassKey,
                       functorClassKey,
-                      monadClassKey, monadPlusClassKey,
+                      monadClassKey, monadPlusClassKey, monadFailClassKey,
                       isStringClassKey,
                       applicativeClassKey, foldableClassKey,
                       traversableClassKey, alternativeClassKey
