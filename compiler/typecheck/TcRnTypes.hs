@@ -146,6 +146,9 @@ import FastString
 import GHC.Fingerprint
 
 import Control.Monad (ap, liftM)
+#if __GLASGOW_HASKELL__ > 710
+import qualified Control.Monad.Fail as MonadFail
+#endif
 
 #ifdef GHCI
 import Data.Map      ( Map )
@@ -2358,6 +2361,11 @@ instance Monad TcPluginM where
   TcPluginM m >>= k =
     TcPluginM (\ ev -> do a <- m ev
                           runTcPluginM (k a) ev)
+
+#if __GLASGOW_HASKELL__ > 710
+instance MonadFail.MonadFail TcPluginM where
+  fail x   = TcPluginM (const $ fail x)
+#endif
 
 runTcPluginM :: TcPluginM a -> Maybe EvBindsVar -> TcM a
 runTcPluginM (TcPluginM m) = m

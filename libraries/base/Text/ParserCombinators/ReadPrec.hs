@@ -1,5 +1,6 @@
 {-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE CPP #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -64,7 +65,9 @@ import qualified Text.ParserCombinators.ReadP as ReadP
 import GHC.Num( Num(..) )
 import GHC.Base
 
-import qualified Control.Monad.Fail
+#if __GLASGOW_HASKELL__ > 710
+import qualified Control.Monad.Fail as MonadFail
+#endif
 
 -- ---------------------------------------------------------------------------
 -- The readPrec type
@@ -84,8 +87,10 @@ instance Monad ReadPrec where
   fail s    = P (\_ -> fail s)
   P f >>= k = P (\n -> do a <- f n; let P f' = k a in f' n)
 
-instance Control.Monad.Fail.MonadFail ReadPrec where
+#if __GLASGOW_HASKELL__ > 710
+instance MonadFail.MonadFail ReadPrec where
   fail s    = P (\_ -> fail s)
+#endif
 
 instance MonadPlus ReadPrec where
   mzero = pfail
