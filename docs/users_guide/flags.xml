@@ -1125,7 +1125,7 @@
             <entry>Enable do-block desugaring to use the new <link linkend="monad-fail">MonadFail mechanism</link>.</entry>
             <entry>dynamic</entry>
             <entry><option>-XNoMonadFailDesugaring</option></entry>
-            <entry>7.2.1</entry>
+            <entry>7.8.1</entry>
           </row>
           <row>
             <entry><option>-XMonoLocalBinds</option></entry>
