@@ -885,7 +885,9 @@ checkMissingMonadFail pattern doExprType = do
              $$
              nest 2 (text "is used in the context"
                          <+> quotes (ppr zonkedTypeHead)
-                         <> text ", which does not have a MonadFail instance."
+                         <> text ","
+                     $$
+                     text "which does not have a MonadFail instance."
                      $$
                      text "This will become an error in GHC 8.2,"
                          <+> text "under the MonadFail proposal."))

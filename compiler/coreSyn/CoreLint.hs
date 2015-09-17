@@ -65,7 +65,7 @@ import HscTypes
 import DynFlags
 import Control.Monad
 #if __GLASGOW_HASKELL__ > 710
-import Control.Monad.Fail
+import qualified Control.Monad.Fail as MonadFail
 #endif
 import MonadUtils
 import Data.Maybe
@@ -1507,8 +1507,15 @@ instance Monad LintM where
                            Nothing -> (Nothing, errs'))
 
 #if __GLASGOW_HASKELL__ > 710
-instance MonadFail LintM where
-  fail err = failWithL (text err)
+instance MonadFail.MonadFail LintM where
+    fail err = useFailHack $ failWithL (text err)
+      where
+        -- GHC complains about an unused import of Control.Monad.Fail if we
+        -- do not explicitly use MonadFail.fail anywhere, but upon deleting the
+        -- import the function "fail" is not a visible class member anymore.
+        -- For this reason, we sneak in an explicit use of MonadFail.fail here.
+        -- See Trac #10890 about the status of this issue.
+        useFailHack x = const x (MonadFail.fail :: String -> Maybe a)
 #endif
 
 instance HasDynFlags LintM where
