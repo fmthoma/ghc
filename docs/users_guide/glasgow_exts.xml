@@ -2101,6 +2101,7 @@ MonadFail Proposal (MFP).</para>
 <para>This flag is temporary, and will be deprecated in a future release. It is
 included so that library authors have a hard check for whether their code
 will work with future GHC versions.</para>
+</sect2>
 
 
    <!-- ===================== REBINDABLE SYNTAX ===================  -->
