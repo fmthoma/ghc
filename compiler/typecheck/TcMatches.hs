@@ -880,7 +880,9 @@ checkMissingMonadFail pattern doExprType = do
     doExprTypeHead <- tyHead <$> zonkType doExprType
     monadFailClass <- tcLookupClass monadFailClassName
     hasMonadFailInstance <- doExprTypeHead `isInstanceOf` monadFailClass
-    unless hasMonadFailInstance (emitWarning doExprTypeHead)
+    let blockHaskMonadFailConstraintAlready = False -- TODO!
+    unless (hasMonadFailInstance || blockHaskMonadFailConstraintAlready)
+           (emitWarning doExprTypeHead)
 
   where
 
@@ -917,11 +919,11 @@ checkMissingMonadFail pattern doExprType = do
 
     tyHead :: TcType -> TcType
     tyHead ty
-        | Just (con, _) <- splitAppTy_maybe ty = con
-        | Just _ <- splitFunTy_maybe ty        = panicFor "FunTy"
-        | Just _ <- splitTyConApp_maybe ty     = panicFor "TyConApp"
-        | Just _ <- splitForAllTy_maybe ty     = panicFor "ForAllTy"
-        | otherwise                            = panicFor "<some other>"
+        | Just (con, _) <- splitAppTy_maybe ty    = con
+        | Just (arg, _res) <- splitFunTy_maybe ty = panicFor "FunTy"
+        | Just _ <- splitTyConApp_maybe ty        = panicFor "TyConApp"
+        | Just _ <- splitForAllTy_maybe ty        = panicFor "ForAllTy"
+        | otherwise                               = panicFor "<some other>"
 
         where panicFor x = panic ("MonadFail check applied to " ++ x ++ " type")
 
