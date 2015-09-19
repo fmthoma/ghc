@@ -1,23 +1,23 @@
 
-MonadFailWarnings.hs:12:5: warning:
+MonadFailWarnings.hs:13:5: warning:
     The failable pattern ‘Just x’
       is used in the context ‘m’,
       which does not have a MonadFail instance.
       This will become an error in GHC 8.2, under the MonadFail proposal.
 
-MonadFailWarnings.hs:28:5: warning:
+MonadFailWarnings.hs:29:5: warning:
     The failable pattern ‘Just x’
       is used in the context ‘Identity’,
       which does not have a MonadFail instance.
       This will become an error in GHC 8.2, under the MonadFail proposal.
 
-MonadFailWarnings.hs:44:5: warning:
+MonadFailWarnings.hs:45:5: warning:
     The failable pattern ‘Just x’
       is used in the context ‘ST s’,
       which does not have a MonadFail instance.
       This will become an error in GHC 8.2, under the MonadFail proposal.
 
-MonadFailWarnings.hs:52:5: warning:
+MonadFailWarnings.hs:53:5: warning:
     The failable pattern ‘Just x’
       is used in the context ‘(->) r’,
       which does not have a MonadFail instance.

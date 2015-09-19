@@ -1,7 +1,8 @@
 module MonadFailWarnings where
 
-import Data.Functor.Identity
+import Control.Monad.Fail
 import Control.Monad.ST
+import Data.Functor.Identity
 
 
 
@@ -72,13 +73,29 @@ singleConMatch = do
 
 
 
+-- should NOT warn, because Maybe' has a MonadFail instance
+data Maybe' a = Nothing' | Just' a
+instance Functor Maybe' where fmap = undefined
+instance Applicative Maybe' where pure = undefined; (<*>) = undefined
+instance Monad Maybe' where (>>=) = undefined
+instance MonadFail Maybe' where fail = undefined
+customFailable :: Maybe' a
+customFailable = do
+    Just x <- undefined
+    undefined
+
+
 -- should NOT warn, because patterns always match
-test6, test7, test8, test9 :: Monad m => m a
-test6 = do x <- undefined
-           undefined
-test7 = do ~(x:y) <- undefined
-           undefined
-test8 = do _ <- undefined
-           undefined
-test9 = do (a,b) <- undefined
-           undefined
+wildcardx, explicitlyIrrefutable, wildcard_, tuple :: Monad m => m a
+wildcardx = do
+    x <- undefined
+    undefined
+explicitlyIrrefutable = do
+    ~(x:y) <- undefined
+    undefined
+wildcard_ = do
+    _ <- undefined
+    undefined
+tuple = do
+    (a,b) <- undefined
+    undefined

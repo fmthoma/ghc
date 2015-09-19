@@ -903,7 +903,7 @@ checkMissingMonadFail pattern doExprType = do
         instEnvs <- tcGetInstEnvs
         let (matches, _unifies, _) = lookupInstEnv True instEnvs typeclass [zonkedTypeHead]
             hasMatches = not (null matches)
-        return $ hasMatches
+        return hasMatches
         -- If we consider unifies as well here, we won't get warnings
         -- for e.g. "Monad m => m a" expressions, since the "m" unifies
         -- with something in the environment, e.g. "Maybe".
@@ -916,10 +916,14 @@ checkMissingMonadFail pattern doExprType = do
 
 
     tyHead :: TcType -> TcType
-    tyHead ty =
-        case splitAppTy_maybe ty of
-            Just (con, _) -> con
-            Nothing -> panic "MonadFail check applied to non-constructor application"
+    tyHead ty
+        | Just (con, _) <- splitAppTy_maybe ty = con
+        | Just _ <- splitFunTy_maybe ty        = panicFor "FunTy"
+        | Just _ <- splitTyConApp_maybe ty     = panicFor "TyConApp"
+        | Just _ <- splitForAllTy_maybe ty     = panicFor "ForAllTy"
+        | otherwise                            = panicFor "<some other>"
+
+        where panicFor x = panic ("MonadFail check applied to " ++ x ++ " type")
 
 
 
