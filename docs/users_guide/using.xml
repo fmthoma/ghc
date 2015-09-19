@@ -1367,7 +1367,7 @@ test.hs:(5,4)-(6,7):
           </para>
 
 <programlisting>
--- What happens if a Nothing is encountered? -> (m)fail.
+-- What happens if a Nothing is encountered? -> fail.
 x = do Just x &lt;- someComputation
        return x
 </programlisting>

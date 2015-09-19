@@ -523,17 +523,20 @@ tcMcStmt ctxt (BindStmt pat rhs bind_op fail_op) res_ty thing_inside
            -- (>>=) :: rhs_ty -> (pat_ty -> new_res_ty) -> res_ty
         ; bind_op'   <- tcSyntaxOp MCompOrigin bind_op
                              (mkFunTys [rhs_ty, mkFunTy pat_ty new_res_ty] res_ty)
-        ; (pat', thing) <- tcPat (StmtCtxt ctxt) pat pat_ty $
-                           thing_inside new_res_ty
+
+        -- If (but only if) the pattern can fail, typecheck the 'fail' operator
+        ; fail_op' <- if isIrrefutableHsPat pat
+            then return noSyntaxExpr
+            else tcSyntaxOp MCompOrigin fail_op (mkFunTy stringTy new_res_ty)
+
         ; rhs' <- tcMonoExprNC rhs rhs_ty
 
-           -- If (but only if) the pattern can fail, typecheck the 'fail' operator
-        ; fail_op' <- if isIrrefutableHsPat pat'
-            then return noSyntaxExpr
-            else do
-                emitWarnings <- emitMonadFailWarnings
-                when emitWarnings (checkMissingMonadFail pat new_res_ty)
-                tcSyntaxOp MCompOrigin fail_op (mkFunTy stringTy new_res_ty)
+        ; (pat', thing) <- tcPat (StmtCtxt ctxt) pat pat_ty $
+                           thing_inside new_res_ty
+
+        ; unless (isIrrefutableHsPat pat') $ do
+            emitWarnings <- emitMonadFailWarnings
+            when emitWarnings (checkMissingMonadFail pat' new_res_ty)
 
         ; return (BindStmt pat' rhs' bind_op' fail_op', thing) }
 
@@ -772,17 +775,20 @@ tcDoStmt ctxt (BindStmt pat rhs bind_op fail_op) res_ty thing_inside
         ; new_res_ty <- newFlexiTyVarTy liftedTypeKind
         ; bind_op'   <- tcSyntaxOp DoOrigin bind_op
                              (mkFunTys [rhs_ty, mkFunTy pat_ty new_res_ty] res_ty)
-        ; (pat', thing) <- tcPat (StmtCtxt ctxt) pat pat_ty $
-                           thing_inside new_res_ty
-        ; rhs' <- tcMonoExprNC rhs rhs_ty
 
         -- If (but only if) the pattern can fail, typecheck the 'fail' operator
-        ; fail_op' <- if isIrrefutableHsPat pat'
+        ; fail_op' <- if isIrrefutableHsPat pat
             then return noSyntaxExpr
-            else do
-                emitWarnings <- emitMonadFailWarnings
-                when emitWarnings (checkMissingMonadFail pat new_res_ty)
-                tcSyntaxOp DoOrigin fail_op (mkFunTy stringTy new_res_ty)
+            else tcSyntaxOp DoOrigin fail_op (mkFunTy stringTy new_res_ty)
+
+        ; rhs' <- tcMonoExprNC rhs rhs_ty
+
+        ; (pat', thing) <- tcPat (StmtCtxt ctxt) pat pat_ty $
+                           thing_inside new_res_ty
+
+        ; unless (isIrrefutableHsPat pat') $ do
+            emitWarnings <- emitMonadFailWarnings
+            when emitWarnings (checkMissingMonadFail pat' new_res_ty)
 
         ; return (BindStmt pat' rhs' bind_op' fail_op', thing) }
 
@@ -873,7 +879,7 @@ checkMissingMonadFail :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 checkMissingMonadFail pattern doExprType = do
     doExprTypeHead <- tyHead <$> zonkType doExprType
     monadFailClass <- tcLookupClass monadFailClassName
-    hasMonadFailInstance <- isInstanceOf monadFailClass doExprTypeHead
+    hasMonadFailInstance <- doExprTypeHead `isInstanceOf` monadFailClass
     unless hasMonadFailInstance (emitWarning doExprTypeHead)
 
   where
@@ -892,12 +898,12 @@ checkMissingMonadFail pattern doExprType = do
                      text "This will become an error in GHC 8.2,"
                          <+> text "under the MonadFail proposal."))
 
-    isInstanceOf :: Class -> Type -> TcRn Bool
-    isInstanceOf typeclass zonkedTypeHead = do
+    isInstanceOf :: Type -> Class -> TcRn Bool
+    isInstanceOf zonkedTypeHead typeclass = do
         instEnvs <- tcGetInstEnvs
         let (matches, _unifies, _) = lookupInstEnv True instEnvs typeclass [zonkedTypeHead]
             hasMatches = not (null matches)
-        return hasMatches
+        return $ hasMatches
         -- If we consider unifies as well here, we won't get warnings
         -- for e.g. "Monad m => m a" expressions, since the "m" unifies
         -- with something in the environment, e.g. "Maybe".
