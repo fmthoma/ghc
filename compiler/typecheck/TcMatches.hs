@@ -534,9 +534,7 @@ tcMcStmt ctxt (BindStmt pat rhs bind_op fail_op) res_ty thing_inside
         ; (pat', thing) <- tcPat (StmtCtxt ctxt) pat pat_ty $
                            thing_inside new_res_ty
 
-        ; unless (isIrrefutableHsPat pat') $ do
-            emitWarnings <- emitMonadFailWarnings
-            when emitWarnings (checkMissingMonadFail pat' new_res_ty)
+        ; monadFailWarnings pat' new_res_ty
 
         ; return (BindStmt pat' rhs' bind_op' fail_op', thing) }
 
@@ -786,9 +784,7 @@ tcDoStmt ctxt (BindStmt pat rhs bind_op fail_op) res_ty thing_inside
         ; (pat', thing) <- tcPat (StmtCtxt ctxt) pat pat_ty $
                            thing_inside new_res_ty
 
-        ; unless (isIrrefutableHsPat pat') $ do
-            emitWarnings <- emitMonadFailWarnings
-            when emitWarnings (checkMissingMonadFail pat' new_res_ty)
+        ; monadFailWarnings pat' new_res_ty
 
         ; return (BindStmt pat' rhs' bind_op' fail_op', thing) }
 
@@ -865,15 +861,47 @@ tcDoStmt _ stmt _ _
 
 
 
--- MonadFail Proposal
+{-
+Note [Treat rebindable syntax first]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+When typechecking
+        do { bar; ... } :: IO ()
+we want to typecheck 'bar' in the knowledge that it should be an IO thing,
+pushing info from the context into the RHS.  To do this, we check the
+rebindable syntax first, and push that information into (tcMonoExprNC rhs).
+Otherwise the error shows up when cheking the rebindable syntax, and
+the expected/inferred stuff is back to front (see Trac #3613).
+-}
 
-emitMonadFailWarnings :: TcM Bool
-emitMonadFailWarnings = do
-    desugarFlag <- fmap (xopt Opt_MonadFailDesugaring) getDynFlags
-    warnFlag <- woptM Opt_WarnMissingMonadFailInstance
-    return $ if | desugarFlag -> False -- No warnings if MonadFail is live
-                | warnFlag    -> True  -- Otherwise warnings if they're turned on
-                | otherwise   -> False
+
+
+---------------------------------------------------
+-- MonadFail Proposal warnings
+---------------------------------------------------
+
+monadFailWarnings :: OutputableBndr a => LPat a -> TcType -> TcRn ()
+monadFailWarnings pat doExprType = unless (isIrrefutableHsPat pat) $ do
+    emitMFWarnings <- shouldEmitMonadFailWarnings
+    rebindableSyntax <- xoptM Opt_RebindableSyntax
+    if | emitMFWarnings && rebindableSyntax -> warnRebindableClash pat
+       | emitMFWarnings -> checkMissingMonadFail pat doExprType
+       | otherwise -> pure ()
+
+shouldEmitMonadFailWarnings :: TcM Bool
+shouldEmitMonadFailWarnings = do
+    desugarFlag <- xoptM Opt_MonadFailDesugaring
+    missingWarning <- woptM Opt_WarnMissingMonadFailInstance
+    return $ if | desugarFlag    -> False -- No warnings if MonadFail is live
+                | missingWarning -> True  -- Otherwise warnings if they're turned on
+                | otherwise      -> False
+
+warnRebindableClash :: OutputableBndr a => LPat a -> TcRn ()
+warnRebindableClash pattern = addWarnAt (getLoc pattern)
+    (text "The failable pattern" <+> quotes (ppr pattern)
+     $$
+     nest 2 (text "is used together with -XRebindableSyntax. If this is intentional,"
+             $$
+             text "compile with -fno-warn-missing-monadfail-instance."))
 
 checkMissingMonadFail :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 checkMissingMonadFail pattern doExprType = do
@@ -882,12 +910,12 @@ checkMissingMonadFail pattern doExprType = do
     hasMonadFailInstance <- doExprTypeHead `isInstanceOf` monadFailClass
     let blockHaskMonadFailConstraintAlready = False -- TODO!
     unless (hasMonadFailInstance || blockHaskMonadFailConstraintAlready)
-           (emitWarning doExprTypeHead)
+           (missingMonadFailWarning doExprTypeHead)
 
   where
 
-    emitWarning :: TcType -> TcRn ()
-    emitWarning zonkedTypeHead = do
+    missingMonadFailWarning :: TcType -> TcRn ()
+    missingMonadFailWarning zonkedTypeHead = do
         addWarnAt (getLoc pattern)
             (text "The failable pattern" <+> quotes (ppr pattern)
              $$
@@ -900,46 +928,32 @@ checkMissingMonadFail pattern doExprType = do
                      text "This will become an error in GHC 8.2,"
                          <+> text "under the MonadFail proposal."))
 
-    isInstanceOf :: Type -> Class -> TcRn Bool
-    isInstanceOf zonkedTypeHead typeclass = do
-        instEnvs <- tcGetInstEnvs
-        let (matches, _unifies, _) = lookupInstEnv True instEnvs typeclass [zonkedTypeHead]
-            hasMatches = not (null matches)
-        return hasMatches
-        -- If we consider unifies as well here, we won't get warnings
-        -- for e.g. "Monad m => m a" expressions, since the "m" unifies
-        -- with something in the environment, e.g. "Maybe".
+isInstanceOf :: Type -> Class -> TcRn Bool
+isInstanceOf zonkedTypeHead typeclass = do
+    instEnvs <- tcGetInstEnvs
+    let (matches, _unifies, _) = lookupInstEnv True instEnvs typeclass [zonkedTypeHead]
+        hasMatches = not (null matches)
+    return hasMatches
+    -- If we consider unifies as well here, we won't get warnings
+    -- for e.g. "Monad m => m a" expressions, since the "m" unifies
+    -- with something in the environment, e.g. "Maybe".
 
-    zonkType :: TcType -> TcRn TcType
-    zonkType ty = do
-        tidyEnv <- tcInitTidyEnv
-        (_, zonkedType) <- zonkTidyTcType tidyEnv ty
-        return zonkedType
-
-
-    tyHead :: TcType -> TcType
-    tyHead ty
-        | Just (con, _) <- splitAppTy_maybe ty    = con
-        | Just (arg, _res) <- splitFunTy_maybe ty = panicFor "FunTy"
-        | Just _ <- splitTyConApp_maybe ty        = panicFor "TyConApp"
-        | Just _ <- splitForAllTy_maybe ty        = panicFor "ForAllTy"
-        | otherwise                               = panicFor "<some other>"
-
-        where panicFor x = panic ("MonadFail check applied to " ++ x ++ " type")
+zonkType :: TcType -> TcRn TcType
+zonkType ty = do
+    tidyEnv <- tcInitTidyEnv
+    (_, zonkedType) <- zonkTidyTcType tidyEnv ty
+    return zonkedType
 
 
+tyHead :: TcType -> TcType
+tyHead ty
+    | Just (con, _) <- splitAppTy_maybe ty = con
+    | Just _ <- splitFunTy_maybe ty        = panicFor "FunTy"
+    | Just _ <- splitTyConApp_maybe ty     = panicFor "TyConApp"
+    | Just _ <- splitForAllTy_maybe ty     = panicFor "ForAllTy"
+    | otherwise                            = panicFor "<some other>"
 
-{-
-Note [Treat rebindable syntax first]
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-When typechecking
-        do { bar; ... } :: IO ()
-we want to typecheck 'bar' in the knowledge that it should be an IO thing,
-pushing info from the context into the RHS.  To do this, we check the
-rebindable syntax first, and push that information into (tcMonoExprNC rhs).
-Otherwise the error shows up when cheking the rebindable syntax, and
-the expected/inferred stuff is back to front (see Trac #3613).
--}
+    where panicFor x = panic ("MonadFail check applied to " ++ x ++ " type")
 
 
 
