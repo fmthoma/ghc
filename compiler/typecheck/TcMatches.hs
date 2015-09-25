@@ -891,9 +891,9 @@ shouldEmitMonadFailWarnings :: TcM Bool
 shouldEmitMonadFailWarnings = do
     desugarFlag <- xoptM Opt_MonadFailDesugaring
     missingWarning <- woptM Opt_WarnMissingMonadFailInstance
-    return $ if | desugarFlag    -> False -- No warnings if MonadFail is live
-                | missingWarning -> True  -- Otherwise warnings if they're turned on
-                | otherwise      -> False
+    pure $ if | desugarFlag    -> False -- No warnings if MonadFail is live
+              | missingWarning -> True  -- Otherwise warnings if they're turned on
+              | otherwise      -> False
 
 warnRebindableClash :: OutputableBndr a => LPat a -> TcRn ()
 warnRebindableClash pattern = addWarnAt (getLoc pattern)
@@ -933,7 +933,7 @@ isInstanceOf zonkedTypeHead typeclass = do
     instEnvs <- tcGetInstEnvs
     let (matches, _unifies, _) = lookupInstEnv True instEnvs typeclass [zonkedTypeHead]
         hasMatches = not (null matches)
-    return hasMatches
+    pure hasMatches
     -- If we consider unifies as well here, we won't get warnings
     -- for e.g. "Monad m => m a" expressions, since the "m" unifies
     -- with something in the environment, e.g. "Maybe".
@@ -942,7 +942,7 @@ zonkType :: TcType -> TcRn TcType
 zonkType ty = do
     tidyEnv <- tcInitTidyEnv
     (_, zonkedType) <- zonkTidyTcType tidyEnv ty
-    return zonkedType
+    pure zonkedType
 
 
 tyHead :: TcType -> TcType
