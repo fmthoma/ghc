@@ -458,7 +458,7 @@ reportGroup mk_err ctxt cts
   where
     monadFailHack ctxt cts err = do
         case map (ctLocOrigin . ctLoc) cts of
-            [DirtyMonadFailHack] -> reportWarning err
+            [DirtyMonadFailHack _pat] -> reportWarning err
             _ -> maybeReportError ctxt err
 
 maybeReportHoleError :: ReportErrCtxt -> Ct -> ErrMsg -> TcM ()

@@ -39,9 +39,7 @@ import Util
 import SrcLoc
 import FastString
 import DynFlags
-import InstEnv
 import PrelNames (monadFailClassName)
-import Class
 import Type
 import Inst
 
@@ -882,28 +880,21 @@ the expected/inferred stuff is back to front (see Trac #3613).
 
 monadFailWarnings :: LPat TcId -> TcType -> TcRn ()
 monadFailWarnings pat doExprType = unless (isIrrefutableHsPat pat) $ do
-    addMonadFailConstraint doExprType
-    emitMFWarnings <- shouldEmitMonadFailWarnings
     rebindableSyntax <- xoptM Opt_RebindableSyntax
-    if | emitMFWarnings && rebindableSyntax -> warnRebindableClash pat
-       | emitMFWarnings -> checkMissingMonadFail pat doExprType
-       | otherwise -> pure ()
+    desugarFlag      <- xoptM Opt_MonadFailDesugaring
+    missingWarning   <- woptM Opt_WarnMissingMonadFailInstance
+    if | rebindableSyntax -> warnRebindableClash pat
+       | desugarFlag      -> pure ()
+       | missingWarning   -> addMonadFailConstraint pat doExprType
+       | otherwise        -> pure ()
 
-addMonadFailConstraint :: TcType -> TcRn ()
-addMonadFailConstraint doExprType = do
+addMonadFailConstraint :: LPat TcId -> TcType -> TcRn ()
+addMonadFailConstraint pat doExprType = do
     doExprTypeHead <- tyHead <$> zonkType doExprType
     monadFailClass <- tcLookupClass monadFailClassName
     let predType = mkClassPred monadFailClass [doExprTypeHead]
-    _ <- emitWanted DirtyMonadFailHack predType
+    _ <- emitWanted (DirtyMonadFailHack pat) predType
     pure ()
-
-shouldEmitMonadFailWarnings :: TcM Bool
-shouldEmitMonadFailWarnings = do
-    desugarFlag <- xoptM Opt_MonadFailDesugaring
-    missingWarning <- woptM Opt_WarnMissingMonadFailInstance
-    pure $ if | desugarFlag    -> False -- No warnings if MonadFail is live
-              | missingWarning -> True  -- Otherwise warnings if they're turned on
-              | otherwise      -> False
 
 warnRebindableClash :: LPat TcId -> TcRn ()
 warnRebindableClash pattern = addWarnAt (getLoc pattern)
@@ -912,41 +903,6 @@ warnRebindableClash pattern = addWarnAt (getLoc pattern)
      nest 2 (text "is used together with -XRebindableSyntax. If this is intentional,"
              $$
              text "compile with -fno-warn-missing-monadfail-instance."))
-
-checkMissingMonadFail :: LPat TcId -> TcType -> TcRn ()
-checkMissingMonadFail pattern doExprType = do
-    doExprTypeHead <- tyHead <$> zonkType doExprType
-    monadFailClass <- tcLookupClass monadFailClassName
-    hasMonadFailInstance <- doExprTypeHead `isInstanceOf` monadFailClass
-    let blockHaskMonadFailConstraintAlready = False -- TODO!
-    unless (hasMonadFailInstance || blockHaskMonadFailConstraintAlready)
-           (missingMonadFailWarning doExprTypeHead)
-
-  where
-
-    missingMonadFailWarning :: TcType -> TcRn ()
-    missingMonadFailWarning zonkedTypeHead = do
-        addWarnAt (getLoc pattern)
-            (text "The failable pattern" <+> quotes (ppr pattern)
-             $$
-             nest 2 (text "is used in the context"
-                         <+> quotes (ppr zonkedTypeHead)
-                         <> text ","
-                     $$
-                     text "which does not have a MonadFail instance."
-                     $$
-                     text "This will become an error in GHC 8.2,"
-                         <+> text "under the MonadFail proposal."))
-
-isInstanceOf :: Type -> Class -> TcRn Bool
-isInstanceOf zonkedTypeHead typeclass = do
-    instEnvs <- tcGetInstEnvs
-    let (matches, _unifies, _) = lookupInstEnv True instEnvs typeclass [zonkedTypeHead]
-        hasMatches = not (null matches)
-    pure hasMatches
-    -- If we consider unifies as well here, we won't get warnings
-    -- for e.g. "Monad m => m a" expressions, since the "m" unifies
-    -- with something in the environment, e.g. "Maybe".
 
 zonkType :: TcType -> TcRn TcType
 zonkType ty = do

@@ -1,24 +1,56 @@
 
 MonadFailWarnings.hs:13:5: warning:
-    The failable pattern ‘Just x’
-      is used in the context ‘m’,
-      which does not have a MonadFail instance.
-      This will become an error in GHC 8.2, under the MonadFail proposal.
+    Could not deduce (MonadFail m)
+      arising from the failable pattern ‘Just x’ (this will become an error in GHC 8.*)
+    from the context: Monad m
+      bound by the type signature for:
+                 general :: Monad m => m a
+      at MonadFailWarnings.hs:11:12-25
+    Possible fix:
+      add (MonadFail m) to the context of
+        the type signature for:
+          general :: Monad m => m a
+    In a stmt of a 'do' block: Just x <- undefined
+    In the expression:
+      do { Just x <- undefined;
+           undefined }
+    In an equation for ‘general’:
+        general
+          = do { Just x <- undefined;
+                 undefined }
 
 MonadFailWarnings.hs:29:5: warning:
-    The failable pattern ‘Just x’
-      is used in the context ‘Identity’,
-      which does not have a MonadFail instance.
-      This will become an error in GHC 8.2, under the MonadFail proposal.
+    No instance for (MonadFail Identity)
+      arising from the failable pattern ‘Just x’ (this will become an error in GHC 8.*)
+    In a stmt of a 'do' block: Just x <- undefined
+    In the expression:
+      do { Just x <- undefined;
+           undefined }
+    In an equation for ‘identity’:
+        identity
+          = do { Just x <- undefined;
+                 undefined }
 
 MonadFailWarnings.hs:45:5: warning:
-    The failable pattern ‘Just x’
-      is used in the context ‘ST s’,
-      which does not have a MonadFail instance.
-      This will become an error in GHC 8.2, under the MonadFail proposal.
+    No instance for (MonadFail (ST s))
+      arising from the failable pattern ‘Just x’ (this will become an error in GHC 8.*)
+    In a stmt of a 'do' block: Just x <- undefined
+    In the expression:
+      do { Just x <- undefined;
+           undefined }
+    In an equation for ‘st’:
+        st
+          = do { Just x <- undefined;
+                 undefined }
 
 MonadFailWarnings.hs:53:5: warning:
-    The failable pattern ‘Just x’
-      is used in the context ‘(->) r’,
-      which does not have a MonadFail instance.
-      This will become an error in GHC 8.2, under the MonadFail proposal.
+    No instance for (MonadFail ((->) r))
+      arising from the failable pattern ‘Just x’ (this will become an error in GHC 8.*)
+    In a stmt of a 'do' block: Just x <- undefined
+    In the expression:
+      do { Just x <- undefined;
+           undefined }
+    In an equation for ‘reader’:
+        reader
+          = do { Just x <- undefined;
+                 undefined }

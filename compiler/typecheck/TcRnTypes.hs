@@ -2247,7 +2247,7 @@ data CtOrigin
   | UnboundOccurrenceOf RdrName
   | ListOrigin          -- An overloaded list
   | StaticOrigin        -- A static form
-  | DirtyMonadFailHack
+  | DirtyMonadFailHack (LPat TcId)
 
 ctoHerald :: SDoc
 ctoHerald = ptext (sLit "arising from")
@@ -2335,7 +2335,9 @@ pprCtO AnnOrigin             = ptext (sLit "an annotation")
 pprCtO HoleOrigin            = ptext (sLit "a use of") <+> quotes (ptext $ sLit "_")
 pprCtO ListOrigin            = ptext (sLit "an overloaded list")
 pprCtO StaticOrigin          = ptext (sLit "a static form")
-pprCtO DirtyMonadFailHack    = ptext (sLit "an artificial hacky MonadFail constraint")
+pprCtO (DirtyMonadFailHack pat) = hsep [ ptext (sLit "the failable pattern")
+                                       , quotes (ppr pat)
+                                       , ptext (sLit "(this will become an error in GHC 8.*)") ]
 pprCtO _                     = panic "pprCtOrigin"
 
 {-
