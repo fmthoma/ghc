@@ -3424,8 +3424,7 @@ standardWarnings -- see Note [Documenting warning flags]
         Opt_WarnUnsupportedLlvmVersion,
         Opt_WarnContextQuantification,
         Opt_WarnTabs,
-        Opt_WarnMissedSpecs,
-        Opt_WarnMissingMonadFailInstance
+        Opt_WarnMissedSpecs
       ]
 
 minusWOpts :: [WarningFlag]

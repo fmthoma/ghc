@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fwarn-missing-monadfail-instance #-}
+
 module MonadFailWarnings where
 
 import Control.Monad.Fail
