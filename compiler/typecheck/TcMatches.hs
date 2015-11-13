@@ -880,7 +880,7 @@ the expected/inferred stuff is back to front (see Trac #3613).
 -- MonadFail Proposal warnings
 ---------------------------------------------------
 
-monadFailWarnings :: OutputableBndr a => LPat a -> TcType -> TcRn ()
+monadFailWarnings :: LPat TcId -> TcType -> TcRn ()
 monadFailWarnings pat doExprType = unless (isIrrefutableHsPat pat) $ do
     addMonadFailConstraint doExprType
     emitMFWarnings <- shouldEmitMonadFailWarnings
@@ -905,7 +905,7 @@ shouldEmitMonadFailWarnings = do
               | missingWarning -> True  -- Otherwise warnings if they're turned on
               | otherwise      -> False
 
-warnRebindableClash :: OutputableBndr a => LPat a -> TcRn ()
+warnRebindableClash :: LPat TcId -> TcRn ()
 warnRebindableClash pattern = addWarnAt (getLoc pattern)
     (text "The failable pattern" <+> quotes (ppr pattern)
      $$
@@ -913,7 +913,7 @@ warnRebindableClash pattern = addWarnAt (getLoc pattern)
              $$
              text "compile with -fno-warn-missing-monadfail-instance."))
 
-checkMissingMonadFail :: OutputableBndr a => LPat a -> TcType -> TcRn ()
+checkMissingMonadFail :: LPat TcId -> TcType -> TcRn ()
 checkMissingMonadFail pattern doExprType = do
     doExprTypeHead <- tyHead <$> zonkType doExprType
     monadFailClass <- tcLookupClass monadFailClassName
