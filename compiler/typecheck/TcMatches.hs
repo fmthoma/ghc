@@ -893,7 +893,7 @@ addMonadFailConstraint pat doExprType = do
     doExprTypeHead <- tyHead <$> zonkType doExprType
     monadFailClass <- tcLookupClass monadFailClassName
     let predType = mkClassPred monadFailClass [doExprTypeHead]
-    _ <- emitWanted (DirtyMonadFailHack pat) predType
+    _ <- emitWanted (FailablePattern pat) predType
     pure ()
 
 warnRebindableClash :: LPat TcId -> TcRn ()
