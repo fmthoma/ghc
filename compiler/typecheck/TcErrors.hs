@@ -451,10 +451,15 @@ reportGroup :: (ReportErrCtxt -> [Ct] -> TcM ErrMsg) -> ReportErrCtxt
             -> [Ct] -> TcM ()
 reportGroup mk_err ctxt cts
   = do { err <- mk_err ctxt cts
-       ; maybeReportError ctxt err
+       ; monadFailHack ctxt cts err
        ; mapM_ (maybeAddDeferredBinding ctxt err) cts }
                -- Add deferred bindings for all
                -- But see Note [Always warn with -fdefer-type-errors]
+  where
+    monadFailHack ctxt cts err = do
+        case map (ctLocOrigin . ctLoc) cts of
+            [DirtyMonadFailHack] -> reportWarning err
+            _ -> maybeReportError ctxt err
 
 maybeReportHoleError :: ReportErrCtxt -> Ct -> ErrMsg -> TcM ()
 maybeReportHoleError ctxt ct err

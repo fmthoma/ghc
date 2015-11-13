@@ -43,6 +43,7 @@ import InstEnv
 import PrelNames (monadFailClassName)
 import Class
 import Type
+import Inst
 
 -- Create chunkified tuple tybes for monad comprehensions
 import MkCore
@@ -881,11 +882,20 @@ the expected/inferred stuff is back to front (see Trac #3613).
 
 monadFailWarnings :: OutputableBndr a => LPat a -> TcType -> TcRn ()
 monadFailWarnings pat doExprType = unless (isIrrefutableHsPat pat) $ do
+    addMonadFailConstraint doExprType
     emitMFWarnings <- shouldEmitMonadFailWarnings
     rebindableSyntax <- xoptM Opt_RebindableSyntax
     if | emitMFWarnings && rebindableSyntax -> warnRebindableClash pat
        | emitMFWarnings -> checkMissingMonadFail pat doExprType
        | otherwise -> pure ()
+
+addMonadFailConstraint :: TcType -> TcRn ()
+addMonadFailConstraint doExprType = do
+    doExprTypeHead <- tyHead <$> zonkType doExprType
+    monadFailClass <- tcLookupClass monadFailClassName
+    let predType = mkClassPred monadFailClass [doExprTypeHead]
+    _ <- emitWanted DirtyMonadFailHack predType
+    pure ()
 
 shouldEmitMonadFailWarnings :: TcM Bool
 shouldEmitMonadFailWarnings = do
