@@ -1,8 +1,6 @@
 -- Test purpose:
--- Ensure that MonadFail warnings are issued correctly if the warning flag
--- is enabled
-
-{-# OPTIONS_GHC -fwarn-missing-monadfail-instance #-}
+-- Make sure that not enabling MonadFail warnings makes code compile just
+-- as it did in < 8.0
 
 module MonadFailWarnings where
 
