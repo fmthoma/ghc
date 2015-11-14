@@ -10,8 +10,6 @@ import Data.Functor.Identity
 
 
 
--- should warn, because the do-block gets a general Monad constraint,
--- but should have MonadFail
 general :: Monad m => m a
 general = do
     Just x <- undefined
@@ -19,7 +17,6 @@ general = do
 
 
 
--- should NOT warn, because the constraint is correct
 general' :: MonadFail m => m a
 general' = do
     Just x <- undefined
@@ -27,7 +24,6 @@ general' = do
 
 
 
--- should warn, because Identity isn't MonadFail
 identity :: Identity a
 identity = do
     Just x <- undefined
@@ -35,7 +31,6 @@ identity = do
 
 
 
--- should NOT warn, because IO is MonadFail
 io :: IO a
 io = do
     Just x <- undefined
@@ -43,7 +38,6 @@ io = do
 
 
 
--- should warn, because (ST s) is not MonadFail
 st :: ST s a
 st = do
     Just x <- undefined
@@ -51,7 +45,6 @@ st = do
 
 
 
--- should warn, because (r ->) is not MonadFail
 reader :: r -> a
 reader = do
     Just x <- undefined
@@ -59,7 +52,6 @@ reader = do
 
 
 
--- should NOT warn, because matching against newtype
 newtype Newtype a = Newtype a
 newtypeMatch :: Identity a
 newtypeMatch = do
@@ -68,7 +60,6 @@ newtypeMatch = do
 
 
 
--- should NOT warn, because Data has only one constructor
 data Data a = Data a
 singleConMatch :: Identity a
 singleConMatch = do
@@ -77,7 +68,6 @@ singleConMatch = do
 
 
 
--- should NOT warn, because Maybe' has a MonadFail instance
 data Maybe' a = Nothing' | Just' a
 instance Functor Maybe' where fmap = undefined
 instance Applicative Maybe' where pure = undefined; (<*>) = undefined
@@ -89,7 +79,6 @@ customFailable = do
     undefined
 
 
--- should NOT warn, because patterns always match
 wildcardx, explicitlyIrrefutable, wildcard_, tuple :: Monad m => m a
 wildcardx = do
     x <- undefined
