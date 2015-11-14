@@ -888,9 +888,10 @@ monadFailWarnings pat doExprType = unless (isIrrefutableHsPat pat) $ do
     rebindableSyntax <- xoptM Opt_RebindableSyntax
     desugarFlag      <- xoptM Opt_MonadFailDesugaring
     missingWarning   <- woptM Opt_WarnMissingMonadFailInstance
-    if | rebindableSyntax -> warnRebindableClash pat
-       | desugarFlag      -> pure ()
-       | missingWarning   -> addMonadFailConstraint pat doExprType
+    if | rebindableSyntax && (desugarFlag || missingWarning)
+           -> warnRebindableClash pat
+       | not desugarFlag && missingWarning
+           -> addMonadFailConstraint pat doExprType
        | otherwise        -> pure ()
 
 addMonadFailConstraint :: LPat TcId -> TcType -> TcRn ()
@@ -905,7 +906,8 @@ warnRebindableClash :: LPat TcId -> TcRn ()
 warnRebindableClash pattern = addWarnAt (getLoc pattern)
     (text "The failable pattern" <+> quotes (ppr pattern)
      $$
-     nest 2 (text "is used together with -XRebindableSyntax. If this is intentional,"
+     nest 2 (text "is used together with -XRebindableSyntax."
+             <+> text "If this is intentional,"
              $$
              text "compile with -fno-warn-missing-monadfail-instance."))
 
