@@ -734,14 +734,7 @@ instance Monad UM where
 
 #if __GLASGOW_HASKELL__ > 710
 instance MonadFail.MonadFail UM where
-    fail _   = useFailHack $ UM (\_tvs _subst -> SurelyApart) -- failed pattern match
-      where
-        -- GHC complains about an unused import of Control.Monad.Fail if we
-        -- do not explicitly use MonadFail.fail anywhere, but upon deleting the
-        -- import the function "fail" is not a visible class member anymore.
-        -- For this reason, we sneak in an explicit use of MonadFail.fail here.
-        -- See Trac #10890 about the status of this issue.
-        useFailHack x = const x (MonadFail.fail :: String -> Maybe a)
+    fail _   = UM (\_tvs _subst -> SurelyApart) -- failed pattern match
 #endif
 
 -- returns an idempotent substitution
