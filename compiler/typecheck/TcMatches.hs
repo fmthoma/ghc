@@ -878,6 +878,11 @@ the expected/inferred stuff is back to front (see Trac #3613).
 -- MonadFail Proposal warnings
 ---------------------------------------------------
 
+-- The idea behind issuing MonadFail warnings is that we add them whenever a
+-- failable pattern is encountered. However, instead of throwing a type error
+-- when the constraint cannot be satisfied, we only issue a warning in
+-- TcErrors.hs.
+
 monadFailWarnings :: LPat TcId -> TcType -> TcRn ()
 monadFailWarnings pat doExprType = unless (isIrrefutableHsPat pat) $ do
     rebindableSyntax <- xoptM Opt_RebindableSyntax
