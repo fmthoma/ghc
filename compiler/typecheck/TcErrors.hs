@@ -451,14 +451,14 @@ reportGroup :: (ReportErrCtxt -> [Ct] -> TcM ErrMsg) -> ReportErrCtxt
             -> [Ct] -> TcM ()
 reportGroup mk_err ctxt cts
   = do { err <- mk_err ctxt cts
-       ; if isOnlyMonadFailInstanceMissingError ctxt cts err
+       ; if isOnlyMonadFailInstanceMissingError cts
             then reportWarning err
             else maybeReportError ctxt err
        ; mapM_ (maybeAddDeferredBinding ctxt err) cts }
                -- Add deferred bindings for all
                -- But see Note [Always warn with -fdefer-type-errors]
   where
-    isOnlyMonadFailInstanceMissingError ctxt cts err =
+    isOnlyMonadFailInstanceMissingError cts =
         case map (ctLocOrigin . ctLoc) cts of
             [FailablePattern _pat] -> True
             _otherwise             -> False
