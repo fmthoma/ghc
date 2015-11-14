@@ -20,7 +20,6 @@ module Control.Monad
 
       Functor(fmap)
     , Monad((>>=), (>>), return, fail)
-    , MonadFail()
     , MonadPlus(mzero, mplus)
     -- * Functions
 
@@ -79,7 +78,6 @@ module Control.Monad
 import Data.Foldable ( Foldable, sequence_, msum, mapM_, foldlM, forM_ )
 import Data.Functor ( void )
 import Data.Traversable ( forM, mapM, sequence )
-import Control.Monad.Fail ( MonadFail )
 
 import GHC.Base hiding ( mapM, sequence )
 import GHC.List ( zipWith, unzip, replicate )
