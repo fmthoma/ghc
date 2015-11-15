@@ -458,7 +458,7 @@ reportGroup mk_err ctxt cts =
 
         (_, cts') -> do { err <- mk_err ctxt cts'
                         ; maybeReportError ctxt err
-                        ; mapM_ (maybeAddDeferredBinding ctxt err) cts }
+                        ; mapM_ (maybeAddDeferredBinding ctxt err) cts' }
                                 -- Add deferred bindings for all
                                 -- But see Note [Always warn with -fdefer-type-errors]
   where
