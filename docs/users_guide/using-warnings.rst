@@ -190,8 +190,8 @@ command line.
 
     This option is deprecated.
 
-    Caused a warning to be emitted when a definition was in conflict with
-    the AMP (Applicative-Monad proosal).
+    Used to cause a warning to be emitted in GHC before 7.10 when a
+    definition was in conflict with the AMP (Applicative-Monad proosal).
 
 ``-fwarn-missing-monadfail-instance``
     .. index::
