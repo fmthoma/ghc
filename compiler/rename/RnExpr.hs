@@ -11,7 +11,6 @@ free variables.
 -}
 
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module RnExpr (
